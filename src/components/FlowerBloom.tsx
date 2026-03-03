@@ -141,8 +141,8 @@ export default function FlowerBloom() {
         />
       ))}
 
-      <DotCluster bloomed={bloomed} />
       </div>
+      <DotCluster bloomed={bloomed} />
     </div>
   );
 }
