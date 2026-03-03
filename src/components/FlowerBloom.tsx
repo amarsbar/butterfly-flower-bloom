@@ -1,7 +1,10 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { motion } from "motion/react";
+
+const DESIGN_W = 1728;
+const DESIGN_H = 1117;
 
 const PETALS = [
   { x: -200.52, y: -200.34 },
@@ -50,12 +53,26 @@ function DotCluster({ bloomed }: { bloomed: boolean }) {
 
 export default function FlowerBloom() {
   const [bloomed, setBloomed] = useState(false);
+  const [scale, setScale] = useState(1);
+
+  useEffect(() => {
+    const update = () => {
+      setScale(Math.min(window.innerWidth / DESIGN_W, window.innerHeight / DESIGN_H));
+    };
+    update();
+    window.addEventListener("resize", update);
+    return () => window.removeEventListener("resize", update);
+  }, []);
 
   return (
     <div
       className="relative flex items-center justify-center w-full h-screen bg-[#f6f6fa] overflow-hidden cursor-pointer"
       onClick={() => setBloomed(true)}
     >
+      <div
+        className="relative flex items-center justify-center"
+        style={{ width: DESIGN_W, height: DESIGN_H, transform: `scale(${scale})` }}
+      >
       {/* Petals — 401.782×401.782 ellipses */}
       {PETALS.map((petal, i) => (
         <motion.div
@@ -125,6 +142,7 @@ export default function FlowerBloom() {
       ))}
 
       <DotCluster bloomed={bloomed} />
+      </div>
     </div>
   );
 }
