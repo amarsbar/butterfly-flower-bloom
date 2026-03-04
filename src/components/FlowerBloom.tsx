@@ -41,7 +41,7 @@ const centerEase = [0.32, 0.03, 0.25, 1] as const;
 const centerTransition = { duration: 0.3, ease: centerEase };
 
 const centerVariants = {
-  seed:  { width: 66, height: 66, borderRadius: 32, backgroundColor: "#d2ecf2", transition: centerTransition },
+  seed:  { width: 66, height: 66, borderRadius: 32, backgroundColor: "#d2ecf2", transition: { ...centerTransition, duration: 0.15, delay: 0.15 } },
   bloom: { width: 463.595, height: 463.595, borderRadius: 26.026, backgroundColor: "#feefff", transition: centerTransition },
 };
 
@@ -52,8 +52,14 @@ const petalTransition = {
   opacity: { duration: 0, delay: 0.17 },
 };
 
+const petalSeedTransition = {
+  x: { duration: 0.15, ease: petalEase },
+  y: { duration: 0.15, ease: petalEase },
+  opacity: { duration: 0, delay: 0.15 },
+};
+
 const petalVariants = {
-  seed:  { x: 0, y: 0, opacity: 0, transition: petalTransition },
+  seed:  { x: 0, y: 0, opacity: 0, transition: petalSeedTransition },
   bloom: (p: Petal) => ({ x: p.x, y: p.y, opacity: 1, transition: petalTransition }),
 };
 
@@ -63,7 +69,7 @@ const accentVariants = {
   seed: (a: Accent) => ({
     width: 12, height: 12, x: a.initialX, y: a.initialY,
     rotate: a.initialRotate, borderRadius: 12, backgroundColor: "#48617f",
-    transition: accentSpring,
+    transition: { ...accentSpring, stiffness: 300, damping: 30, delay: 0.15 },
   }),
   bloom: (a: Accent) => ({
     width: 39.04, height: 39.04, x: a.finalX, y: a.finalY,
