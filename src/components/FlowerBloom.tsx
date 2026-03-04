@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef, useCallback } from "react";
 import { motion } from "motion/react";
 
 type Page = "menu" | "note";
@@ -108,25 +108,24 @@ function DotCluster({ activePage }: { activePage: Page }) {
 export default function FlowerBloom() {
   const [page, setPage] = useState<Page>("menu");
   const [scale, setScale] = useState(1);
+  const containerRef = useRef<HTMLDivElement>(null);
+
+  const updateScale = useCallback(() => {
+    const el = containerRef.current;
+    if (!el) return;
+    setScale(Math.min(el.clientWidth / DESIGN_W, el.clientHeight / DESIGN_H));
+  }, []);
 
   useEffect(() => {
-    const update = () => {
-      const vp = window.visualViewport;
-      const w = vp?.width ?? window.innerWidth;
-      const h = vp?.height ?? window.innerHeight;
-      setScale(Math.min(w / DESIGN_W, h / DESIGN_H));
-    };
-    update();
-    window.visualViewport?.addEventListener("resize", update);
-    window.addEventListener("resize", update);
-    return () => {
-      window.visualViewport?.removeEventListener("resize", update);
-      window.removeEventListener("resize", update);
-    };
-  }, []);
+    updateScale();
+    const observer = new ResizeObserver(updateScale);
+    if (containerRef.current) observer.observe(containerRef.current);
+    return () => observer.disconnect();
+  }, [updateScale]);
 
   return (
     <div
+      ref={containerRef}
       className="relative flex items-center justify-center w-full h-svh bg-[#f6f6fa] overflow-hidden cursor-pointer"
       onClick={() => setPage(page === "menu" ? "note" : "menu")}
     >
