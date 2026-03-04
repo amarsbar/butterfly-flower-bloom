@@ -87,7 +87,7 @@ function DotCluster({ activePage }: { activePage: Page }) {
     <svg
       width="55" height="53" viewBox="0 0 55 53" fill="none"
       className="absolute z-30"
-      style={{ left: "50%", transform: "translateX(-50%)", bottom: 16 }}
+      style={{ left: "50%", transform: "translateX(-50%)", bottom: "max(16px, env(safe-area-inset-bottom, 16px))" }}
     >
       {NAV_DOTS.map((dot, i) => {
         const isActive = dot.page === activePage;
