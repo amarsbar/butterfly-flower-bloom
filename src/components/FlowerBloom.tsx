@@ -39,9 +39,10 @@ type Accent = (typeof ACCENTS)[number];
 
 const centerEase = [0.32, 0.03, 0.25, 1] as const;
 const centerTransition = { duration: 0.3, ease: centerEase };
+const centerSeedTransition = { duration: 0.15, ease: centerEase, delay: 0.15 };
 
 const centerVariants = {
-  seed:  { width: 66, height: 66, borderRadius: 32, backgroundColor: "#d2ecf2", transition: { ...centerTransition, duration: 0.15, delay: 0.15 } },
+  seed:  { width: 66, height: 66, borderRadius: 32, backgroundColor: "#d2ecf2", transition: centerSeedTransition },
   bloom: { width: 463.595, height: 463.595, borderRadius: 26.026, backgroundColor: "#feefff", transition: centerTransition },
 };
 
@@ -64,12 +65,13 @@ const petalVariants = {
 };
 
 const accentSpring = { type: "spring" as const, stiffness: 131.6, damping: 21.2, mass: 2 };
+const accentSeedSpring = { type: "spring" as const, stiffness: 300, damping: 30, mass: 2, delay: 0.15 };
 
 const accentVariants = {
   seed: (a: Accent) => ({
     width: 12, height: 12, x: a.initialX, y: a.initialY,
     rotate: a.initialRotate, borderRadius: 12, backgroundColor: "#48617f",
-    transition: { ...accentSpring, stiffness: 300, damping: 30, delay: 0.15 },
+    transition: accentSeedSpring,
   }),
   bloom: (a: Accent) => ({
     width: 39.04, height: 39.04, x: a.finalX, y: a.finalY,
