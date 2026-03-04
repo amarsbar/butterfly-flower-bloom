@@ -48,8 +48,8 @@ const centerVariants = {
 
 const petalEase = [0.06, 0.06, 0.51, 1.1] as const;
 const petalTransition = {
-  x: { duration: 0.6, ease: petalEase, delay: 0.17 },
-  y: { duration: 0.6, ease: petalEase, delay: 0.17 },
+  x: { duration: 0.25, ease: petalEase, delay: 0.17 },
+  y: { duration: 0.25, ease: petalEase, delay: 0.17 },
   opacity: { duration: 0, delay: 0.17 },
 };
 

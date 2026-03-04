@@ -1,0 +1,16 @@
+[    2114ms] [WARNING] Statsig is not ready to log exposures, will retry in 1 seconds @ https://www.figma.com/webpack-artifacts/assets/vendor-core-c1d527f9b495c128.min.js.br:53
+[    3282ms] [WARNING] The powerPreference option is currently ignored when calling requestAdapter() on Windows. See https://crbug.com/369219127 @ https://www.figma.com/webpack-artifacts/assets/1362-8b2da3927eee7699.min.js.br:1163
+[    3849ms] [WARNING] Canvas2D: Multiple readback operations using getImageData are faster with the willReadFrequently attribute set to true. See: https://html.spec.whatwg.org/multipage/canvas.html#concept-canvas-will-read-frequently @ https://static.figma.com/fullscreen/cfd858a2e6c73959fc71f3dd476806396fdc38d5/fullscreen-wasm/compiled_wasm.js.br:1
+[    3919ms] [WARNING] Canvas2D: Multiple readback operations using getImageData are faster with the willReadFrequently attribute set to true. See: https://html.spec.whatwg.org/multipage/canvas.html#concept-canvas-will-read-frequently @ https://static.figma.com/fullscreen/cfd858a2e6c73959fc71f3dd476806396fdc38d5/fullscreen-wasm/compiled_wasm.js.br:1
+[    4105ms] [ERROR] Failed to load resource: the server responded with a status of 401 () @ https://www.figma.com/api/mobile_app_push/bZx7TUh5kinMfJ3GvpZouE:0
+[    4124ms] E: XHR for "/api/mobile_app_push/bZx7TUh5kinMfJ3GvpZouE" failed with status 401
+    at C (https://www.figma.com/webpack-artifacts/assets/1362-8b2da3927eee7699.min.js.br:1097:13967)
+    at async C.r [as post] (https://www.figma.com/webpack-artifacts/assets/1362-8b2da3927eee7699.min.js.br:1097:14597)
+[    4372ms] [ERROR] Failed to load resource: the server responded with a status of 401 () @ https://www.figma.com/api/folders/132024871:0
+[    4440ms] E: XHR for "/api/folders/132024871" failed with status 401
+    at C (https://www.figma.com/webpack-artifacts/assets/1362-8b2da3927eee7699.min.js.br:1097:13967)
+    at async Object.P [as get] (https://www.figma.com/webpack-artifacts/assets/1362-8b2da3927eee7699.min.js.br:1097:14350)
+    at async https://www.figma.com/webpack-artifacts/assets/1362-8b2da3927eee7699.min.js.br:891:138351
+    at async _.validate (https://www.figma.com/webpack-artifacts/assets/figma_app_beta-d3231fdbc9cd7acc.min.js.br:422:1522449)
+    at async h.fetchObject (https://www.figma.com/webpack-artifacts/assets/1362-8b2da3927eee7699.min.js.br:365:134734)
+    at async g (https://www.figma.com/webpack-artifacts/assets/1362-8b2da3927eee7699.min.js.br:365:115025)
