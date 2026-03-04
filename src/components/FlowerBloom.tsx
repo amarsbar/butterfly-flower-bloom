@@ -111,21 +111,34 @@ export default function FlowerBloom() {
 
   useEffect(() => {
     const update = () => {
-      setScale(Math.min(window.innerWidth / DESIGN_W, window.innerHeight / DESIGN_H));
+      const vp = window.visualViewport;
+      const w = vp?.width ?? window.innerWidth;
+      const h = vp?.height ?? window.innerHeight;
+      setScale(Math.min(w / DESIGN_W, h / DESIGN_H));
     };
     update();
+    window.visualViewport?.addEventListener("resize", update);
     window.addEventListener("resize", update);
-    return () => window.removeEventListener("resize", update);
+    return () => {
+      window.visualViewport?.removeEventListener("resize", update);
+      window.removeEventListener("resize", update);
+    };
   }, []);
 
   return (
     <div
-      className="relative flex items-center justify-center w-full h-dvh bg-[#f6f6fa] overflow-hidden cursor-pointer"
+      className="relative flex items-center justify-center w-full h-svh bg-[#f6f6fa] overflow-hidden cursor-pointer"
       onClick={() => setPage(page === "menu" ? "note" : "menu")}
     >
       <motion.div
         className="relative flex items-center justify-center"
-        style={{ width: DESIGN_W, height: DESIGN_H, transform: `scale(${scale})` }}
+        style={{
+          width: DESIGN_W,
+          height: DESIGN_H,
+          transform: `scale(${scale})`,
+          transformOrigin: "center",
+          margin: `${-(DESIGN_H * (1 - scale)) / 2}px ${-(DESIGN_W * (1 - scale)) / 2}px`,
+        }}
         initial={false}
         animate={page === "note" ? "bloom" : "seed"}
       >
