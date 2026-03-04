@@ -120,7 +120,7 @@ export default function FlowerBloom() {
 
   return (
     <div
-      className="relative flex items-center justify-center w-full h-screen bg-[#f6f6fa] overflow-hidden cursor-pointer"
+      className="relative flex items-center justify-center w-full h-dvh bg-[#f6f6fa] overflow-hidden cursor-pointer"
       onClick={() => setPage(page === "menu" ? "note" : "menu")}
     >
       <motion.div
