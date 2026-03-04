@@ -7,6 +7,7 @@ type Page = "menu" | "note";
 
 const DESIGN_W = 1728;
 const DESIGN_H = 1117;
+const FLOWER_SPAN = 870;
 
 const PETALS = [
   { x: -200.52, y: -200.34 },
@@ -113,7 +114,10 @@ export default function FlowerBloom() {
   const updateScale = useCallback(() => {
     const el = containerRef.current;
     if (!el) return;
-    setScale(Math.min(el.clientWidth / DESIGN_W, el.clientHeight / DESIGN_H));
+    const isPortrait = el.clientHeight >= el.clientWidth;
+    setScale(isPortrait
+      ? el.clientWidth / FLOWER_SPAN
+      : Math.min(el.clientWidth / DESIGN_W, el.clientHeight / DESIGN_H));
   }, []);
 
   useEffect(() => {
