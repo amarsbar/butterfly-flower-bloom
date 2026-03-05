@@ -290,7 +290,7 @@ export default function FlowerBloom() {
   const [scale, setScale] = useState(1);
   const [glowingDots, setGlowingDots] = useState<Set<number>>(new Set());
   const containerRef = useRef<HTMLDivElement>(null);
-  const glowTimeouts = useRef<number[]>([]);
+  const dotTimers = useRef<Map<number, number>>(new Map());
 
   const updateScale = useCallback(() => {
     const el = containerRef.current;
@@ -308,44 +308,46 @@ export default function FlowerBloom() {
     return () => observer.disconnect();
   }, [updateScale]);
 
-  const handleKeystrokeGlow = useCallback((isSpace: boolean) => {
-    if (isSpace) {
-      setGlowingDots(prev => new Set([...prev, ...CENTER_ROW_INDICES]));
-      const timeout = window.setTimeout(() => {
+  const flashDots = useCallback((indices: number[]) => {
+    setGlowingDots(prev => {
+      const next = new Set(prev);
+      indices.forEach(i => next.add(i));
+      return next;
+    });
+    for (const i of indices) {
+      const prev = dotTimers.current.get(i);
+      if (prev !== undefined) clearTimeout(prev);
+      dotTimers.current.set(i, window.setTimeout(() => {
+        dotTimers.current.delete(i);
         setGlowingDots(prev => {
           const next = new Set(prev);
-          CENTER_ROW_INDICES.forEach(i => next.delete(i));
+          next.delete(i);
           return next;
         });
-      }, 600);
-      glowTimeouts.current.push(timeout);
+      }, 600));
+    }
+  }, []);
+
+  const handleKeystrokeGlow = useCallback((isSpace: boolean) => {
+    if (isSpace) {
+      flashDots(CENTER_ROW_INDICES);
     } else {
       if (RIGHT_DOT_INDICES.length === 0) return;
       const rightIdx = RIGHT_DOT_INDICES[Math.floor(Math.random() * RIGHT_DOT_INDICES.length)];
-      const leftIdx = DOT_MIRRORS.get(rightIdx)!;
-      setGlowingDots(prev => new Set([...prev, rightIdx, leftIdx]));
-      const timeout = window.setTimeout(() => {
-        setGlowingDots(prev => {
-          const next = new Set(prev);
-          next.delete(rightIdx);
-          next.delete(leftIdx);
-          return next;
-        });
-      }, 600);
-      glowTimeouts.current.push(timeout);
+      flashDots([rightIdx, DOT_MIRRORS.get(rightIdx)!]);
     }
-  }, []);
+  }, [flashDots]);
 
   useEffect(() => {
     if (page !== 'message') {
       setGlowingDots(new Set());
-      glowTimeouts.current.forEach(clearTimeout);
-      glowTimeouts.current = [];
+      dotTimers.current.forEach(clearTimeout);
+      dotTimers.current.clear();
     }
   }, [page]);
 
   useEffect(() => {
-    return () => glowTimeouts.current.forEach(clearTimeout);
+    return () => dotTimers.current.forEach(clearTimeout);
   }, []);
 
   return (
