@@ -81,28 +81,66 @@ const accentVariants = {
   }),
 };
 
+const LABEL_STYLE: React.CSSProperties = {
+  fontFamily: "'Akkurat Mono', monospace",
+  fontSize: 16,
+  color: '#5e748e',
+  letterSpacing: '-0.64px',
+  lineHeight: 1.1,
+  whiteSpace: 'nowrap',
+};
+
+const LABEL_CLICKABLE: React.CSSProperties = { ...LABEL_STYLE, cursor: 'pointer' };
+
+// Position label wrapper at design center, then offset with translate
+const labelPos = (transform: string): React.CSSProperties => ({
+  position: 'absolute', left: '50%', top: '50%', transform,
+});
+
+// Offsets from design center (864, 558.5): Message above top dot, Note right of
+// right dot, Readings left of left dot, About below bottom dot
+const LABELS: { text: string; page?: Page; style: React.CSSProperties }[] = [
+  { text: "Message", style: labelPos('translate(-50%, -109.5px)') },
+  { text: "Readings", style: labelPos('translate(calc(-100% - 91px), -9.5px)') },
+  { text: "Note", page: "note", style: labelPos('translate(95px, -8.5px)') },
+  { text: "About", style: labelPos('translate(-50%, 91.5px)') },
+];
+
+const labelVariants = {
+  seed: { opacity: 1, transition: { duration: 0.3, delay: 0.5 } },
+  bloom: { opacity: 0, transition: { duration: 0.15 } },
+};
+
 // --- Components ---
 
 function DotCluster({ activePage }: { activePage: Page }) {
   return (
-    <svg
-      width="55" height="53" viewBox="0 0 55 53" fill="none"
-      className="absolute z-30"
-      style={{ left: "50%", transform: "translateX(-50%)", bottom: "max(16px, env(safe-area-inset-bottom, 16px))" }}
+    <div
+      className="absolute z-30 flex items-center justify-center overflow-hidden"
+      style={{
+        right: "max(16px, env(safe-area-inset-right, 16px))",
+        bottom: "max(16px, env(safe-area-inset-bottom, 16px))",
+        width: 56,
+        height: 56,
+        borderRadius: 1000,
+        border: '1px solid #48617f',
+      }}
     >
-      {NAV_DOTS.map((dot, i) => {
-        const isActive = dot.page === activePage;
-        return (
-          <circle
-            key={i}
-            cx={dot.cx}
-            cy={dot.cy}
-            r={isActive ? 7.5 : 7}
-            {...(isActive ? { fill: "#48617F" } : { stroke: "#48617F" })}
-          />
-        );
-      })}
-    </svg>
+      <svg width="42" height="40" viewBox="0 0 55 53" fill="none">
+        {NAV_DOTS.map((dot, i) => {
+          const isActive = dot.page === activePage;
+          return (
+            <circle
+              key={i}
+              cx={dot.cx}
+              cy={dot.cy}
+              r={isActive ? 7.5 : 7}
+              {...(isActive ? { fill: "#48617F" } : { stroke: "#48617F" })}
+            />
+          );
+        })}
+      </svg>
+    </div>
   );
 }
 
@@ -130,8 +168,8 @@ export default function FlowerBloom() {
   return (
     <div
       ref={containerRef}
-      className="relative flex items-center justify-center w-full h-svh bg-[#f6f6fa] overflow-hidden cursor-pointer"
-      onClick={() => setPage(page === "menu" ? "note" : "menu")}
+      className={`relative flex items-center justify-center w-full h-svh bg-[#f6f6fa] overflow-hidden${page === "note" ? " cursor-pointer" : ""}`}
+      onClick={() => { if (page === "note") setPage("menu"); }}
     >
       <motion.div
         className="relative flex items-center justify-center"
@@ -161,7 +199,26 @@ export default function FlowerBloom() {
 
         {/* Accent diamonds */}
         {ACCENTS.map((accent, i) => (
-          <motion.div key={i} custom={accent} variants={accentVariants} className="absolute z-20" />
+          <motion.div
+            key={i}
+            custom={accent}
+            variants={accentVariants}
+            className="absolute z-20"
+            {...(i === 1 ? { onClick: () => setPage("note"), style: { cursor: 'pointer' } } : {})}
+          />
+        ))}
+
+        {/* Labels */}
+        {LABELS.map(({ text, page: targetPage, style }) => (
+          <div key={text} style={style}>
+            <motion.p
+              variants={labelVariants}
+              style={targetPage ? LABEL_CLICKABLE : LABEL_STYLE}
+              {...(targetPage ? { onClick: () => setPage(targetPage) } : {})}
+            >
+              {text}
+            </motion.p>
+          </div>
         ))}
       </motion.div>
 
