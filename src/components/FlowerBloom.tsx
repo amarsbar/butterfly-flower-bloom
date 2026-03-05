@@ -46,9 +46,13 @@ const centerTransition = { duration: 0.3, ease: centerEase };
 const centerSeedTransition = { duration: 0.12, ease: centerEase };
 
 const centerVariants = {
-  seed:  { width: 66, height: 66, borderRadius: 32, backgroundColor: "#d2ecf2", transition: centerSeedTransition },
+  seed: { width: 66, height: 66, borderRadius: 32, backgroundColor: "#d2ecf2", transition: centerSeedTransition },
   bloom: { width: 463.595, height: 463.595, borderRadius: 26.026, backgroundColor: "#feefff", transition: centerTransition },
-  message: { width: 524, height: 529, borderRadius: 32, backgroundColor: "#d2ecf2", transition: centerTransition },
+  message: (custom: { isMobile: boolean; isFocused: boolean } | undefined) => ({
+    width: 524, height: 529, borderRadius: 32, backgroundColor: "#d2ecf2",
+    y: custom?.isMobile && custom?.isFocused ? -180 : 0,
+    transition: centerTransition
+  }),
 };
 
 const petalEase = [0.06, 0.06, 0.51, 1.1] as const;
@@ -65,7 +69,7 @@ const petalSeedTransition = {
 };
 
 const petalVariants = {
-  seed:  { x: 0, y: 0, opacity: 0, transition: petalSeedTransition },
+  seed: { x: 0, y: 0, opacity: 0, transition: petalSeedTransition },
   bloom: (p: Petal) => ({ x: p.x, y: p.y, opacity: 1, transition: petalTransition }),
   message: { x: 0, y: 0, opacity: 0, transition: petalSeedTransition },
 };
@@ -75,20 +79,22 @@ const msgSpring = { type: "spring" as const, stiffness: 158.5, damping: 38.3, ma
 const accentSeedSpring = { type: "spring" as const, stiffness: 400, damping: 35, mass: 1 };
 
 const accentVariants = {
-  seed: (a: Accent) => ({
+  seed: (a: Accent & { isMobile?: boolean, isFocused?: boolean }) => ({
     width: 12, height: 12, x: a.initialX, y: a.initialY,
-    rotate: a.initialRotate, borderRadius: 12, backgroundColor: "#48617f",
+    rotate: a.initialRotate, borderRadius: 12, backgroundColor: "#48617f", opacity: 1, scale: 1,
     transition: accentSeedSpring,
   }),
-  bloom: (a: Accent) => ({
+  bloom: (a: Accent & { isMobile?: boolean, isFocused?: boolean }) => ({
     width: 39.04, height: 39.04, x: a.finalX, y: a.finalY,
-    rotate: 45, borderRadius: 9.76, backgroundColor: "#ff7031",
+    rotate: 45, borderRadius: 9.76, backgroundColor: "#ff7031", opacity: 1, scale: 1,
     transition: accentSpring,
   }),
-  message: (a: Accent) => ({
+  message: (a: Accent & { isMobile?: boolean, isFocused?: boolean }) => ({
     width: 39.04, height: 39.04, x: a.msgX, y: a.msgY,
     rotate: 135, borderRadius: 9.76, backgroundColor: "#9C84F4",
-    transition: msgSpring,
+    opacity: a.isMobile && a.isFocused ? 0 : 1,
+    scale: a.isMobile && a.isFocused ? 0.5 : 1,
+    transition: a.isMobile && a.isFocused ? { opacity: { duration: 0 }, ...msgSpring } : msgSpring,
   }),
 };
 
@@ -143,9 +149,16 @@ const MSG_TITLE_STYLE: React.CSSProperties = {
 };
 
 const msgTitleVariants = {
-  seed: { opacity: 0, transition: { duration: 0, delay: 0 } },
-  bloom: { opacity: 0, transition: { duration: 0, delay: 0 } },
-  message: { opacity: 1, transition: { duration: 0, delay: 0.35 } },
+  seed: { opacity: 0, y: 0, transition: { duration: 0, delay: 0 } },
+  bloom: { opacity: 0, y: 0, transition: { duration: 0, delay: 0 } },
+  message: (custom: { isMobile: boolean; isFocused: boolean } | undefined) => ({
+    opacity: 1,
+    y: custom?.isMobile && custom?.isFocused ? -180 : 0,
+    transition: {
+      y: centerTransition,
+      opacity: { duration: 0, delay: 0.35 }
+    }
+  }),
 };
 
 const COUNTER_POSITIONS = [
@@ -158,7 +171,9 @@ type CounterPos = (typeof COUNTER_POSITIONS)[number];
 const counterVariants = {
   seed: { x: 0, y: 0, opacity: 0, transition: accentSeedSpring },
   bloom: { x: 0, y: 0, opacity: 0, transition: accentSeedSpring },
-  message: (p: CounterPos) => ({ x: p.x, y: p.y, opacity: 1, transition: msgSpring }),
+  message: (p: CounterPos & { isMobile?: boolean }) => ({
+    x: p.x, y: p.y, opacity: p.isMobile ? 0 : 1, transition: msgSpring
+  }),
 };
 
 // Decorative dots: 4 columns per side, mirrored left/right, triangular pattern
@@ -178,21 +193,14 @@ const MSG_DOTS: MsgDot[] = MSG_DOT_COLS.flatMap(([colX, rows], col) =>
   ])
 );
 
-const msgDotVariants = {
-  seed: { opacity: 0, transition: { duration: 0 } },
-  bloom: { opacity: 0, transition: { duration: 0 } },
-  message: (dot: MsgDot) => ({
-    opacity: 0.2,
-    transition: { duration: 0, delay: 0.5 + dot.col * 0.08 },
-  }),
-};
 
-// Build right→left mirror index map (vertical inversion: y ↔ -y)
+
+// Build right→left mirror index map (horizontal inversion: x ↔ -x)
 const DOT_MIRRORS = new Map<number, number>();
 MSG_DOTS.forEach((dot, i) => {
   if (dot.x > 0) {
     const mirrorIdx = MSG_DOTS.findIndex(
-      (d, j) => j !== i && d.x === -dot.x && Math.abs(d.y + dot.y) < 0.01
+      (d, j) => j !== i && d.x === -dot.x && Math.abs(d.y - dot.y) < 0.01
     );
     if (mirrorIdx >= 0) DOT_MIRRORS.set(i, mirrorIdx);
   }
@@ -200,6 +208,35 @@ MSG_DOTS.forEach((dot, i) => {
 const RIGHT_DOT_INDICES = [...DOT_MIRRORS.keys()];
 const CENTER_ROW_INDICES = MSG_DOTS.reduce<number[]>((acc, dot, i) => {
   if (Math.abs(dot.y + 24.28) < 0.01) acc.push(i);
+  return acc;
+}, []);
+
+const MOBILE_DOT_COLS: [number, number[]][] = [
+  [152.7, [149.4]],
+  [187.5, [113.2, 149.4, 185.6]],
+  [222.2, [113.2, 149.4, 185.6]],
+  [257.0, [113.2, 149.4, 185.6]],
+];
+
+const MOBILE_DOTS: MsgDot[] = MOBILE_DOT_COLS.flatMap(([colX, rows], col) =>
+  rows.flatMap(y => [
+    { x: colX, y, col },
+    { x: -colX, y, col },
+  ])
+);
+
+const MOBILE_DOT_MIRRORS = new Map<number, number>();
+MOBILE_DOTS.forEach((dot, i) => {
+  if (dot.x > 0) {
+    const mirrorIdx = MOBILE_DOTS.findIndex(
+      (d, j) => j !== i && d.x === -dot.x && Math.abs(d.y - dot.y) < 0.01
+    );
+    if (mirrorIdx >= 0) MOBILE_DOT_MIRRORS.set(i, mirrorIdx);
+  }
+});
+const MOBILE_RIGHT_DOT_INDICES = [...MOBILE_DOT_MIRRORS.keys()];
+const MOBILE_CENTER_ROW_INDICES = MOBILE_DOTS.reduce<number[]>((acc, dot, i) => {
+  if (Math.abs(dot.y - 149.4) < 0.01) acc.push(i);
   return acc;
 }, []);
 
@@ -218,8 +255,16 @@ const SEND_BUTTON: React.CSSProperties = {
   userSelect: 'none',
 };
 
-const sendHidden = { y: 0, opacity: 0, transition: { duration: 0 } };
-const sendVisible = { y: 315, opacity: 1, transition: msgSpring };
+const sendVariants = {
+  hidden: (c: { isMobile?: boolean, isFocused?: boolean }) => ({
+    y: c?.isMobile && c?.isFocused ? -180 : 0,
+    opacity: 0,
+    transition: { duration: 0 }
+  }),
+  visibleDesktop: { y: 315, opacity: 1, transition: msgSpring },
+  visibleMobileUnfocused: { y: 330, opacity: 1, transition: msgSpring },
+  visibleMobileFocused: { y: 149.4, opacity: 1, transition: msgSpring },
+};
 
 const COUNTER_BOX: React.CSSProperties = {
   width: 13,
@@ -286,8 +331,12 @@ export default function FlowerBloom() {
   const [page, setPage] = useState<Page>("menu");
   const [messageText, setMessageText] = useState("");
   const [scale, setScale] = useState(1);
+  const [isMobile, setIsMobile] = useState(false);
+  const [isFocused, setIsFocused] = useState(false);
   const [glowingDots, setGlowingDots] = useState<Set<number>>(new Set());
   const [orangeDots, setOrangeDots] = useState<Set<number>>(new Set());
+  const [dotsCascaded, setDotsCascaded] = useState(false);
+  const [mobileDotsCascaded, setMobileDotsCascaded] = useState(false);
   const containerRef = useRef<HTMLDivElement>(null);
   const dotTimers = useRef<Map<number, number>>(new Map());
   const colorTimers = useRef<Map<number, number>>(new Map());
@@ -295,10 +344,15 @@ export default function FlowerBloom() {
   const updateScale = useCallback(() => {
     const el = containerRef.current;
     if (!el) return;
-    const isPortrait = el.clientHeight >= el.clientWidth;
-    setScale(isPortrait
-      ? el.clientWidth / FLOWER_SPAN
-      : Math.min(el.clientWidth / DESIGN_W, el.clientHeight / DESIGN_H));
+    const isPortrait = el.clientHeight > el.clientWidth;
+    setIsMobile(isPortrait);
+    if (isPortrait) {
+      const scaleW = el.clientWidth / 569;
+      const scaleH = el.clientHeight / 1234;
+      setScale(Math.min(scaleW, scaleH));
+    } else {
+      setScale(Math.min(el.clientWidth / DESIGN_W, el.clientHeight / DESIGN_H));
+    }
   }, []);
 
   useEffect(() => {
@@ -345,16 +399,20 @@ export default function FlowerBloom() {
   }, []);
 
   const handleKeystrokeGlow = useCallback((isSpace: boolean) => {
+    const activeRightIndices = isMobile && isFocused ? MOBILE_RIGHT_DOT_INDICES : RIGHT_DOT_INDICES;
+    const activeMirrors = isMobile && isFocused ? MOBILE_DOT_MIRRORS : DOT_MIRRORS;
+    const activeCenter = isMobile && isFocused ? MOBILE_CENTER_ROW_INDICES : CENTER_ROW_INDICES;
+
     if (isSpace) {
-      flashDots(CENTER_ROW_INDICES);
+      flashDots(activeCenter);
     } else {
-      if (RIGHT_DOT_INDICES.length === 0) return;
-      const rightIdx = RIGHT_DOT_INDICES[Math.floor(Math.random() * RIGHT_DOT_INDICES.length)];
-      const leftIdx = DOT_MIRRORS.get(rightIdx);
+      if (activeRightIndices.length === 0) return;
+      const rightIdx = activeRightIndices[Math.floor(Math.random() * activeRightIndices.length)];
+      const leftIdx = activeMirrors.get(rightIdx);
       if (leftIdx === undefined) return;
       flashDots([rightIdx, leftIdx]);
     }
-  }, [flashDots]);
+  }, [flashDots, isMobile, isFocused]);
 
   useEffect(() => {
     if (page !== 'message') {
@@ -373,6 +431,24 @@ export default function FlowerBloom() {
       colorTimers.current.forEach(clearTimeout);
     };
   }, []);
+
+  useEffect(() => {
+    if (page === 'message') {
+      const timer = setTimeout(() => setDotsCascaded(true), 2000);
+      return () => clearTimeout(timer);
+    } else {
+      setDotsCascaded(false);
+    }
+  }, [page]);
+
+  useEffect(() => {
+    if (isFocused && isMobile) {
+      const timer = setTimeout(() => setMobileDotsCascaded(true), 1200);
+      return () => clearTimeout(timer);
+    } else {
+      setMobileDotsCascaded(false);
+    }
+  }, [isFocused, isMobile]);
 
   return (
     <div
@@ -404,9 +480,9 @@ export default function FlowerBloom() {
         ))}
 
         {/* Center shape */}
-        <motion.div className="absolute z-10 overflow-hidden" variants={centerVariants}>
+        <motion.div className="absolute z-10 overflow-hidden" variants={centerVariants} custom={{ isMobile, isFocused }}>
           <motion.div className="w-full h-full" variants={letterVariants}>
-            <LetterSVG text={messageText} onTextChange={setMessageText} onKeystroke={handleKeystrokeGlow} />
+            <LetterSVG text={messageText} onTextChange={setMessageText} onKeystroke={handleKeystrokeGlow} onFocusChange={setIsFocused} />
           </motion.div>
         </motion.div>
 
@@ -414,7 +490,7 @@ export default function FlowerBloom() {
         {ACCENTS.map((accent, i) => (
           <motion.div
             key={i}
-            custom={accent}
+            custom={{ ...accent, isMobile, isFocused }}
             variants={accentVariants}
             className="absolute z-20"
             onClick={(e: React.MouseEvent) => {
@@ -429,18 +505,23 @@ export default function FlowerBloom() {
 
         {/* Message title */}
         <div style={{ ...labelPos('translate(-50%, -341.5px)'), zIndex: 11 }}>
-          <motion.p variants={msgTitleVariants} style={MSG_TITLE_STYLE}>Message</motion.p>
+          <motion.p custom={{ isMobile, isFocused }} variants={msgTitleVariants} style={MSG_TITLE_STYLE}>Message</motion.p>
         </div>
 
-        {/* Decorative dots */}
-        {MSG_DOTS.map((dot, i) => {
+        {/* Decorative dots (Desktop) */}
+        {!isMobile && MSG_DOTS.map((dot, i) => {
           const isGlowing = glowingDots.has(i);
           return (
             <motion.div
               key={`msg-dot-${i}`}
-              custom={dot}
-              variants={msgDotVariants}
               className="absolute"
+              initial={{ opacity: 0 }}
+              animate={{ opacity: page === 'message' ? (isGlowing ? 1 : 0.2) : 0 }}
+              transition={{
+                duration: (isGlowing || dotsCascaded) ? 0.3 : 0,
+                ease: "linear",
+                delay: page === 'message' ? (isGlowing || dotsCascaded ? 0 : 0.5 + dot.col * 0.12) : 0
+              }}
               style={{
                 width: 8,
                 height: 8,
@@ -449,23 +530,52 @@ export default function FlowerBloom() {
                 left: `calc(50% + ${dot.x - 4}px)`,
                 top: `calc(50% + ${dot.y - 4}px)`,
               }}
-              {...(page === 'message' ? { animate: { opacity: isGlowing ? 1 : 0.2 }, transition: { duration: 0.3, ease: "linear" } } : {})}
+            />
+          );
+        })}
+
+        {/* Decorative dots (Mobile) */}
+        {isMobile && isFocused && MOBILE_DOTS.map((dot, i) => {
+          const isGlowing = glowingDots.has(i);
+          return (
+            <motion.div
+              key={`mobile-msg-dot-${i}`}
+              className="absolute"
+              initial={{ opacity: 0 }}
+              animate={{ opacity: isGlowing ? 1 : 0.2 }}
+              transition={{
+                duration: (isGlowing || mobileDotsCascaded) ? 0.3 : 0,
+                ease: "linear",
+                delay: isGlowing || mobileDotsCascaded ? 0 : 0.3 + dot.col * 0.12
+              }}
+              style={{
+                width: 11.6,
+                height: 11.6,
+                borderRadius: 2.9,
+                backgroundColor: orangeDots.has(i) ? '#ff7031' : '#48617f',
+                left: `calc(50% + ${dot.x - 5.8}px)`,
+                top: `calc(50% + ${dot.y - 5.8}px)`,
+              }}
             />
           );
         })}
 
         {/* Character counters */}
         {COUNTER_POSITIONS.map((pos, i) => (
-          <motion.div key={`counter-${i}`} custom={pos} variants={counterVariants} className="absolute">
+          <motion.div key={`counter-${i}`} custom={{ ...pos, isMobile }} variants={counterVariants} className="absolute">
             <CharCounter count={messageText.length} />
           </motion.div>
         ))}
 
         {/* Send button */}
         <motion.div
-          animate={page === 'message' && messageText.length > 0 ? sendVisible : sendHidden}
+          custom={{ isMobile, isFocused }}
+          initial="hidden"
+          animate={page === 'message' && messageText.length > 0 ? (isMobile ? (isFocused ? "visibleMobileFocused" : "visibleMobileUnfocused") : "visibleDesktop") : "hidden"}
+          variants={sendVariants}
           className="absolute"
           style={SEND_BUTTON}
+          onPointerDown={(e) => { e.preventDefault(); }}
           onClick={(e) => e.stopPropagation()}
         >
           Send

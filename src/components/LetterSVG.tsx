@@ -12,6 +12,7 @@ interface LetterSVGProps {
   text: string;
   onTextChange: (text: string) => void;
   onKeystroke?: (isSpace: boolean) => void;
+  onFocusChange?: (focused: boolean) => void;
 }
 
 const TEXTAREA_STYLE: React.CSSProperties = {
@@ -90,7 +91,7 @@ function measureCharPositions(textarea: HTMLTextAreaElement, text: string): { do
   return { dots, overflows: false };
 }
 
-export default function LetterSVG({ text, onTextChange, onKeystroke }: LetterSVGProps) {
+export default function LetterSVG({ text, onTextChange, onKeystroke, onFocusChange }: LetterSVGProps) {
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const [activeDots, setActiveDots] = useState<Set<number>>(new Set());
   const [caretPos, setCaretPos] = useState<{ top: number; left: number } | null>(null);
@@ -190,8 +191,8 @@ export default function LetterSVG({ text, onTextChange, onKeystroke }: LetterSVG
         onChange={handleChange}
         placeholder="Share your thoughts"
         onClick={(e) => { e.stopPropagation(); updateCaret(); }}
-        onFocus={() => { updateCaret(); }}
-        onBlur={() => { setCaretPos(null); }}
+        onFocus={() => { updateCaret(); onFocusChange?.(true); }}
+        onBlur={() => { setCaretPos(null); onFocusChange?.(false); }}
         onKeyDown={() => requestAnimationFrame(updateCaret)}
         style={TEXTAREA_STYLE}
       />
