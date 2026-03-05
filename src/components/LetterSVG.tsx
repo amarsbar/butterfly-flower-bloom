@@ -54,6 +54,7 @@ const REGARDS_STYLE: React.CSSProperties = {
   lineHeight: 1,
   whiteSpace: 'nowrap',
   margin: 0,
+  userSelect: 'none',
 };
 
 const NAME_STYLE: React.CSSProperties = {
@@ -68,6 +69,7 @@ const NAME_STYLE: React.CSSProperties = {
   lineHeight: 1,
   whiteSpace: 'nowrap',
   margin: 0,
+  userSelect: 'none',
 };
 
 function createMirror(textarea: HTMLTextAreaElement, text: string) {
@@ -200,6 +202,7 @@ export default function LetterSVG({ text, onTextChange, onKeystroke }: LetterSVG
                 r={2}
                 fill="#48617F"
                 opacity={isActive ? 1 : 0.2}
+                style={{ transition: 'opacity 0.15s' }}
               />
             );
           })

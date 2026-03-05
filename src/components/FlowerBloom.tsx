@@ -43,7 +43,7 @@ type Accent = (typeof ACCENTS)[number];
 
 const centerEase = [0.32, 0.03, 0.25, 1] as const;
 const centerTransition = { duration: 0.3, ease: centerEase };
-const centerSeedTransition = { duration: 0.15, ease: centerEase, delay: 0.15 };
+const centerSeedTransition = { duration: 0.12, ease: centerEase };
 
 const centerVariants = {
   seed:  { width: 66, height: 66, borderRadius: 32, backgroundColor: "#d2ecf2", transition: centerSeedTransition },
@@ -59,9 +59,9 @@ const petalTransition = {
 };
 
 const petalSeedTransition = {
-  x: { duration: 0.15, ease: petalEase },
-  y: { duration: 0.15, ease: petalEase },
-  opacity: { duration: 0, delay: 0.15 },
+  x: { duration: 0.12, ease: petalEase },
+  y: { duration: 0.12, ease: petalEase },
+  opacity: { duration: 0 },
 };
 
 const petalVariants = {
@@ -71,8 +71,8 @@ const petalVariants = {
 };
 
 const accentSpring = { type: "spring" as const, stiffness: 131.6, damping: 21.2, mass: 2 };
-const msgSpring = { type: "spring" as const, stiffness: 131.6, damping: 40, mass: 2 };
-const accentSeedSpring = { type: "spring" as const, stiffness: 300, damping: 30, mass: 2, delay: 0.15 };
+const msgSpring = { type: "spring" as const, stiffness: 158.5, damping: 38.3, mass: 4 };
+const accentSeedSpring = { type: "spring" as const, stiffness: 400, damping: 35, mass: 1 };
 
 const accentVariants = {
   seed: (a: Accent) => ({
@@ -119,7 +119,7 @@ const LABELS: { text: string; page?: Page; style: React.CSSProperties }[] = [
 ];
 
 const labelVariants = {
-  seed: { opacity: 1, transition: { duration: 0.3, delay: 0.5 } },
+  seed: { opacity: 1, transition: { duration: 0.3, delay: 0.3 } },
   bloom: { opacity: 0, transition: { duration: 0.15 } },
   message: { opacity: 0, transition: { duration: 0.15 } },
 };
@@ -218,11 +218,8 @@ const SEND_BUTTON: React.CSSProperties = {
   userSelect: 'none',
 };
 
-const sendVariants = {
-  seed: { y: 0, opacity: 0, transition: accentSeedSpring },
-  bloom: { y: 0, opacity: 0, transition: accentSeedSpring },
-  message: { y: 315, opacity: 1, transition: msgSpring },
-};
+const sendHidden = { y: 0, opacity: 0, transition: { duration: 0 } };
+const sendVisible = { y: 315, opacity: 1, transition: msgSpring };
 
 const COUNTER_BOX: React.CSSProperties = {
   width: 13,
@@ -236,6 +233,7 @@ const COUNTER_BOX: React.CSSProperties = {
   color: 'black',
   letterSpacing: '-0.39px',
   lineHeight: 1,
+  userSelect: 'none',
 };
 
 // --- Components ---
@@ -289,8 +287,10 @@ export default function FlowerBloom() {
   const [messageText, setMessageText] = useState("");
   const [scale, setScale] = useState(1);
   const [glowingDots, setGlowingDots] = useState<Set<number>>(new Set());
+  const [orangeDots, setOrangeDots] = useState<Set<number>>(new Set());
   const containerRef = useRef<HTMLDivElement>(null);
   const dotTimers = useRef<Map<number, number>>(new Map());
+  const colorTimers = useRef<Map<number, number>>(new Map());
 
   const updateScale = useCallback(() => {
     const el = containerRef.current;
@@ -314,9 +314,16 @@ export default function FlowerBloom() {
       indices.forEach(i => next.add(i));
       return next;
     });
+    setOrangeDots(prev => {
+      const next = new Set(prev);
+      indices.forEach(i => next.add(i));
+      return next;
+    });
     for (const i of indices) {
-      const prev = dotTimers.current.get(i);
-      if (prev !== undefined) clearTimeout(prev);
+      const prevDot = dotTimers.current.get(i);
+      if (prevDot !== undefined) clearTimeout(prevDot);
+      const prevColor = colorTimers.current.get(i);
+      if (prevColor !== undefined) clearTimeout(prevColor);
       dotTimers.current.set(i, window.setTimeout(() => {
         dotTimers.current.delete(i);
         setGlowingDots(prev => {
@@ -324,6 +331,15 @@ export default function FlowerBloom() {
           next.delete(i);
           return next;
         });
+        // Keep orange for 0.3s more (fade-out duration), then snap to grey
+        colorTimers.current.set(i, window.setTimeout(() => {
+          colorTimers.current.delete(i);
+          setOrangeDots(prev => {
+            const next = new Set(prev);
+            next.delete(i);
+            return next;
+          });
+        }, 300));
       }, 600));
     }
   }, []);
@@ -341,13 +357,19 @@ export default function FlowerBloom() {
   useEffect(() => {
     if (page !== 'message') {
       setGlowingDots(new Set());
+      setOrangeDots(new Set());
       dotTimers.current.forEach(clearTimeout);
       dotTimers.current.clear();
+      colorTimers.current.forEach(clearTimeout);
+      colorTimers.current.clear();
     }
   }, [page]);
 
   useEffect(() => {
-    return () => dotTimers.current.forEach(clearTimeout);
+    return () => {
+      dotTimers.current.forEach(clearTimeout);
+      colorTimers.current.forEach(clearTimeout);
+    };
   }, []);
 
   return (
@@ -421,12 +443,11 @@ export default function FlowerBloom() {
                 width: 8,
                 height: 8,
                 borderRadius: 2,
-                backgroundColor: isGlowing ? '#ff7031' : '#48617f',
-                transition: 'background-color 0.3s',
+                backgroundColor: orangeDots.has(i) ? '#ff7031' : '#48617f',
                 left: `calc(50% + ${dot.x - 4}px)`,
                 top: `calc(50% + ${dot.y - 4}px)`,
               }}
-              {...(page === 'message' ? { animate: { opacity: isGlowing ? 1 : 0.2 }, transition: { duration: 0.3 } } : {})}
+              {...(page === 'message' ? { animate: { opacity: isGlowing ? 1 : 0.2 }, transition: { duration: 0.3, ease: "linear" } } : {})}
             />
           );
         })}
@@ -440,8 +461,8 @@ export default function FlowerBloom() {
 
         {/* Send button */}
         <motion.div
-          variants={sendVariants}
-          className="absolute z-20"
+          animate={page === 'message' && messageText.length > 0 ? sendVisible : sendHidden}
+          className="absolute"
           style={SEND_BUTTON}
           onClick={(e) => e.stopPropagation()}
         >
