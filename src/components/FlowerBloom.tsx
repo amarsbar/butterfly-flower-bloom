@@ -99,6 +99,7 @@ const LABEL_STYLE: React.CSSProperties = {
   letterSpacing: '-0.64px',
   lineHeight: 1.1,
   whiteSpace: 'nowrap',
+  userSelect: 'none',
 };
 
 const LABEL_CLICKABLE: React.CSSProperties = { ...LABEL_STYLE, cursor: 'pointer' };
