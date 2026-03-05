@@ -187,6 +187,39 @@ const msgDotVariants = {
   }),
 };
 
+// Build right→left mirror index map (vertical inversion: y ↔ -y)
+const DOT_MIRRORS = new Map<number, number>();
+MSG_DOTS.forEach((dot, i) => {
+  if (dot.x > 0) {
+    const mirrorIdx = MSG_DOTS.findIndex(
+      (d, j) => j !== i && d.x === -dot.x && Math.abs(d.y + dot.y) < 0.01
+    );
+    if (mirrorIdx >= 0) DOT_MIRRORS.set(i, mirrorIdx);
+  }
+});
+const RIGHT_DOT_INDICES = [...DOT_MIRRORS.keys()];
+
+const SEND_BUTTON: React.CSSProperties = {
+  width: 185,
+  height: 58,
+  borderRadius: 29,
+  backgroundColor: '#ff7031',
+  display: 'flex',
+  alignItems: 'center',
+  justifyContent: 'center',
+  fontFamily: "'ABC Gramercy', serif",
+  fontSize: 24,
+  color: '#d2ecf2',
+  cursor: 'pointer',
+  userSelect: 'none',
+};
+
+const sendVariants = {
+  seed: { y: 0, opacity: 0, transition: accentSeedSpring },
+  bloom: { y: 0, opacity: 0, transition: accentSeedSpring },
+  message: { y: 315, opacity: 1, transition: msgSpring },
+};
+
 const COUNTER_BOX: React.CSSProperties = {
   width: 13,
   padding: 2,
@@ -251,7 +284,9 @@ export default function FlowerBloom() {
   const [page, setPage] = useState<Page>("menu");
   const [messageText, setMessageText] = useState("");
   const [scale, setScale] = useState(1);
+  const [glowingDots, setGlowingDots] = useState<Set<number>>(new Set());
   const containerRef = useRef<HTMLDivElement>(null);
+  const glowTimeouts = useRef<number[]>([]);
 
   const updateScale = useCallback(() => {
     const el = containerRef.current;
@@ -268,6 +303,34 @@ export default function FlowerBloom() {
     if (containerRef.current) observer.observe(containerRef.current);
     return () => observer.disconnect();
   }, [updateScale]);
+
+  const handleKeystrokeGlow = useCallback(() => {
+    if (RIGHT_DOT_INDICES.length === 0) return;
+    const rightIdx = RIGHT_DOT_INDICES[Math.floor(Math.random() * RIGHT_DOT_INDICES.length)];
+    const leftIdx = DOT_MIRRORS.get(rightIdx)!;
+    setGlowingDots(prev => new Set([...prev, rightIdx, leftIdx]));
+    const timeout = window.setTimeout(() => {
+      setGlowingDots(prev => {
+        const next = new Set(prev);
+        next.delete(rightIdx);
+        next.delete(leftIdx);
+        return next;
+      });
+    }, 600);
+    glowTimeouts.current.push(timeout);
+  }, []);
+
+  useEffect(() => {
+    if (page !== 'message') {
+      setGlowingDots(new Set());
+      glowTimeouts.current.forEach(clearTimeout);
+      glowTimeouts.current = [];
+    }
+  }, [page]);
+
+  useEffect(() => {
+    return () => glowTimeouts.current.forEach(clearTimeout);
+  }, []);
 
   return (
     <div
@@ -301,7 +364,7 @@ export default function FlowerBloom() {
         {/* Center shape */}
         <motion.div className="absolute z-10 overflow-hidden" variants={centerVariants}>
           <motion.div className="w-full h-full" variants={letterVariants}>
-            <LetterSVG text={messageText} onTextChange={setMessageText} />
+            <LetterSVG text={messageText} onTextChange={setMessageText} onKeystroke={handleKeystrokeGlow} />
           </motion.div>
         </motion.div>
 
@@ -323,22 +386,26 @@ export default function FlowerBloom() {
         </div>
 
         {/* Decorative dots */}
-        {MSG_DOTS.map((dot, i) => (
-          <motion.div
-            key={`msg-dot-${i}`}
-            custom={dot}
-            variants={msgDotVariants}
-            className="absolute"
-            style={{
-              width: 8,
-              height: 8,
-              borderRadius: 2,
-              backgroundColor: '#48617f',
-              left: `calc(50% + ${dot.x - 4}px)`,
-              top: `calc(50% + ${dot.y - 4}px)`,
-            }}
-          />
-        ))}
+        {MSG_DOTS.map((dot, i) => {
+          const isGlowing = glowingDots.has(i);
+          return (
+            <motion.div
+              key={`msg-dot-${i}`}
+              custom={dot}
+              variants={msgDotVariants}
+              className="absolute"
+              style={{
+                width: 8,
+                height: 8,
+                borderRadius: 2,
+                backgroundColor: isGlowing ? '#ff7031' : '#48617f',
+                left: `calc(50% + ${dot.x - 4}px)`,
+                top: `calc(50% + ${dot.y - 4}px)`,
+              }}
+              {...(page === 'message' ? { animate: { opacity: isGlowing ? 1 : 0.2 }, transition: { duration: 0.3 } } : {})}
+            />
+          );
+        })}
 
         {/* Character counters */}
         {COUNTER_POSITIONS.map((pos, i) => (
@@ -346,6 +413,16 @@ export default function FlowerBloom() {
             <CharCounter count={messageText.length} />
           </motion.div>
         ))}
+
+        {/* Send button */}
+        <motion.div
+          variants={sendVariants}
+          className="absolute z-20"
+          style={SEND_BUTTON}
+          onClick={(e) => e.stopPropagation()}
+        >
+          Send
+        </motion.div>
 
         {/* Labels */}
         {LABELS.map(({ text, page: targetPage, style }) => (

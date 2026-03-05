@@ -20,6 +20,7 @@ const COPY_PROPS = [
 interface LetterSVGProps {
   text: string;
   onTextChange: (text: string) => void;
+  onKeystroke?: () => void;
 }
 
 const TEXTAREA_STYLE: React.CSSProperties = {
@@ -142,7 +143,7 @@ function measureCharPositions(textarea: HTMLTextAreaElement, text: string): { do
   return { dots, overflows };
 }
 
-export default function LetterSVG({ text, onTextChange }: LetterSVGProps) {
+export default function LetterSVG({ text, onTextChange, onKeystroke }: LetterSVGProps) {
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const [activeDots, setActiveDots] = useState<Set<number>>(new Set());
   const rafRef = useRef<number>(0);
@@ -175,8 +176,8 @@ export default function LetterSVG({ text, onTextChange }: LetterSVGProps) {
     const ta = textareaRef.current;
     if (!ta) return;
     const { overflows } = measureCharPositions(ta, newText);
-    if (!overflows) onTextChange(newText);
-  }, [text, onTextChange]);
+    if (!overflows) { onTextChange(newText); onKeystroke?.(); }
+  }, [text, onTextChange, onKeystroke]);
 
   return (
     <div style={{ position: 'relative', width: '100%', height: '100%' }}>
