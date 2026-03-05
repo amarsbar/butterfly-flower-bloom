@@ -161,6 +161,32 @@ const counterVariants = {
   message: (p: CounterPos) => ({ x: p.x, y: p.y, opacity: 1, transition: msgSpring }),
 };
 
+// Decorative dots: 4 columns per side, mirrored left/right, triangular pattern
+const MSG_DOT_COLS: [number, number[]][] = [
+  [309, [-218.5, -169.95, -121.39, -72.83, -24.28, 24.28, 72.83, 121.39, 169.95, 218.5]],
+  [360, [-169.95, -121.39, -72.83, -24.28, 24.28, 72.83, 121.39, 169.95]],
+  [411, [-72.83, -24.28, 24.28]],
+  [462, [-24.28]],
+];
+
+type MsgDot = { x: number; y: number; col: number };
+
+const MSG_DOTS: MsgDot[] = MSG_DOT_COLS.flatMap(([colX, rows], col) =>
+  rows.flatMap(y => [
+    { x: colX, y, col },
+    { x: -colX, y, col },
+  ])
+);
+
+const msgDotVariants = {
+  seed: { opacity: 0, transition: { duration: 0 } },
+  bloom: { opacity: 0, transition: { duration: 0 } },
+  message: (dot: MsgDot) => ({
+    opacity: 0.2,
+    transition: { duration: 0, delay: 0.5 + dot.col * 0.08 },
+  }),
+};
+
 const COUNTER_BOX: React.CSSProperties = {
   width: 13,
   padding: 2,
@@ -294,6 +320,24 @@ export default function FlowerBloom() {
         <div style={{ ...labelPos('translate(-50%, -341.5px)'), zIndex: 11 }}>
           <motion.p variants={msgTitleVariants} style={MSG_TITLE_STYLE}>Message</motion.p>
         </div>
+
+        {/* Decorative dots */}
+        {MSG_DOTS.map((dot, i) => (
+          <motion.div
+            key={`msg-dot-${i}`}
+            custom={dot}
+            variants={msgDotVariants}
+            className="absolute"
+            style={{
+              width: 8,
+              height: 8,
+              borderRadius: 2,
+              backgroundColor: '#48617f',
+              left: `calc(50% + ${dot.x - 4}px)`,
+              top: `calc(50% + ${dot.y - 4}px)`,
+            }}
+          />
+        ))}
 
         {/* Character counters */}
         {COUNTER_POSITIONS.map((pos, i) => (
