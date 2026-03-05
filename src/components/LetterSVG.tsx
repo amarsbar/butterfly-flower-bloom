@@ -8,16 +8,6 @@ const COL_STEP = 456 / 47;
 const ROW_START = 78;
 const ROW_STEP = 52;
 
-// Properties copied from textarea's computed style (textarea-caret-position technique)
-const COPY_PROPS = [
-  'direction', 'boxSizing', 'width', 'height', 'overflowX', 'overflowY',
-  'borderTopWidth', 'borderRightWidth', 'borderBottomWidth', 'borderLeftWidth', 'borderStyle',
-  'paddingTop', 'paddingRight', 'paddingBottom', 'paddingLeft',
-  'fontStyle', 'fontVariant', 'fontWeight', 'fontStretch', 'fontSize', 'fontSizeAdjust',
-  'lineHeight', 'fontFamily', 'textAlign', 'textTransform', 'textIndent', 'textDecoration',
-  'letterSpacing', 'wordSpacing', 'tabSize',
-] as const;
-
 interface LetterSVGProps {
   text: string;
   onTextChange: (text: string) => void;
@@ -73,91 +63,48 @@ const NAME_STYLE: React.CSSProperties = {
   userSelect: 'none',
 };
 
-function createMirror(textarea: HTMLTextAreaElement, text: string) {
-  const computed = getComputedStyle(textarea);
-  const mirror = document.createElement('div');
-  mirror.style.position = 'absolute';
-  mirror.style.visibility = 'hidden';
-  mirror.style.overflow = 'hidden';
-  mirror.style.whiteSpace = 'pre-wrap';
-  mirror.style.wordWrap = 'break-word';
-
-  for (const prop of COPY_PROPS) {
-    mirror.style[prop as any] = computed[prop as any];
-  }
-
-  const segments = text.split('\n');
-  const textNodes: Text[] = [];
-
-  segments.forEach((seg, i) => {
-    if (seg.length > 0) {
-      const node = document.createTextNode(seg);
-      mirror.appendChild(node);
-      textNodes.push(node);
-    }
-    if (i < segments.length - 1) {
-      mirror.appendChild(document.createElement('br'));
-    }
-  });
-
-  return { mirror, textNodes };
-}
-
 function measureCharPositions(textarea: HTMLTextAreaElement, text: string): { dots: Set<number>; overflows: boolean } {
   const dots = new Set<number>();
   if (!text) return { dots, overflows: false };
 
-  const { mirror, textNodes } = createMirror(textarea, text);
-  document.body.appendChild(mirror);
+  let lastPos = text.length;
+  while (lastPos > 0 && text[lastPos - 1] === '\n') lastPos--;
+  if (lastPos === 0) return { dots, overflows: false };
 
-  const mirrorRect = mirror.getBoundingClientRect();
-  const range = document.createRange();
+  try {
+    const leftEdge = getCaretCoordinates(textarea, lastPos - 1);
+    const rightEdge = getCaretCoordinates(textarea, lastPos);
+    const svgY = leftEdge.top + leftEdge.height / 2 + 34;
+    const svgX = (leftEdge.left + rightEdge.left) / 2 + 32;
 
-  let maxDot = -1;
-  let overflows = false;
+    const row = Math.round((svgY - ROW_START) / ROW_STEP);
+    if (row > 6) return { dots, overflows: true };
 
-  for (const node of textNodes) {
-    const len = node.textContent!.length;
-    for (let i = 0; i < len; i++) {
-      range.setStart(node, i);
-      range.setEnd(node, i + 1);
-      const rects = range.getClientRects();
-      if (rects.length === 0) continue;
+    const col = Math.max(0, Math.min(47, Math.round((svgX - COL_START) / COL_STEP)));
+    const maxDot = Math.max(0, row) * 48 + col;
 
-      const rect = rects[0];
-      const ry = (rect.top + rect.bottom) / 2 - mirrorRect.top;
-      const svgY = ry + 34;
-      const row = Math.round((svgY - ROW_START) / ROW_STEP);
-
-      if (row > 6) { overflows = true; continue; }
-
-      const rx = (rect.left + rect.right) / 2 - mirrorRect.left;
-      const svgX = rx + 32;
-      const col = Math.max(0, Math.min(47, Math.round((svgX - COL_START) / COL_STEP)));
-
-      const idx = Math.max(0, row) * 48 + col;
-      if (idx > maxDot) maxDot = idx;
-    }
+    for (let i = 0; i <= maxDot; i++) dots.add(i);
+  } catch {
+    // Fall through with empty dots if measurement fails
   }
-
-  document.body.removeChild(mirror);
-
-  for (let i = 0; i <= maxDot; i++) dots.add(i);
-  return { dots, overflows };
+  return { dots, overflows: false };
 }
 
 export default function LetterSVG({ text, onTextChange, onKeystroke }: LetterSVGProps) {
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const [activeDots, setActiveDots] = useState<Set<number>>(new Set());
   const [caretPos, setCaretPos] = useState<{ top: number; left: number } | null>(null);
-  const [focused, setFocused] = useState(false);
   const rafRef = useRef<number>(0);
 
   const updateCaret = useCallback(() => {
     const ta = textareaRef.current;
     if (!ta || document.activeElement !== ta) { setCaretPos(null); return; }
-    const coords = getCaretCoordinates(ta, ta.selectionEnd);
-    setCaretPos({ top: coords.top, left: coords.left });
+    try {
+      const coords = getCaretCoordinates(ta, ta.selectionEnd);
+      setCaretPos({ top: coords.top, left: coords.left });
+    } catch {
+      setCaretPos(null);
+    }
   }, []);
 
   const measure = useCallback(() => {
@@ -176,7 +123,7 @@ export default function LetterSVG({ text, onTextChange, onKeystroke }: LetterSVG
     let cancelled = false;
     document.fonts.load("24px 'ABC Gramercy'").then(() => {
       if (!cancelled) { measure(); updateCaret(); }
-    });
+    }).catch(() => {});
     return () => { cancelled = true; };
   }, [measure, updateCaret]);
 
@@ -185,11 +132,9 @@ export default function LetterSVG({ text, onTextChange, onKeystroke }: LetterSVG
     if (!ta) return;
     const handler = () => updateCaret();
     ta.addEventListener('select', handler);
-    ta.addEventListener('click', handler);
     ta.addEventListener('keyup', handler);
     return () => {
       ta.removeEventListener('select', handler);
-      ta.removeEventListener('click', handler);
       ta.removeEventListener('keyup', handler);
     };
   }, [updateCaret]);
@@ -245,13 +190,13 @@ export default function LetterSVG({ text, onTextChange, onKeystroke }: LetterSVG
         onChange={handleChange}
         placeholder="Share your thoughts"
         onClick={(e) => { e.stopPropagation(); updateCaret(); }}
-        onFocus={() => { setFocused(true); updateCaret(); }}
-        onBlur={() => { setFocused(false); setCaretPos(null); }}
+        onFocus={() => { updateCaret(); }}
+        onBlur={() => { setCaretPos(null); }}
         onKeyDown={() => requestAnimationFrame(updateCaret)}
         style={TEXTAREA_STYLE}
       />
 
-      {focused && caretPos && (
+      {caretPos && (
         <div
           style={{
             position: 'absolute',

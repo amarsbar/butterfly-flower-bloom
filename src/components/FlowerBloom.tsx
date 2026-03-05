@@ -350,7 +350,9 @@ export default function FlowerBloom() {
     } else {
       if (RIGHT_DOT_INDICES.length === 0) return;
       const rightIdx = RIGHT_DOT_INDICES[Math.floor(Math.random() * RIGHT_DOT_INDICES.length)];
-      flashDots([rightIdx, DOT_MIRRORS.get(rightIdx)!]);
+      const leftIdx = DOT_MIRRORS.get(rightIdx);
+      if (leftIdx === undefined) return;
+      flashDots([rightIdx, leftIdx]);
     }
   }, [flashDots]);
 
