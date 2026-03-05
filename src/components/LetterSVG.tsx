@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef, useCallback } from "react";
+import getCaretCoordinates from "textarea-caret";
 
 const ROWS = [78, 130, 182, 234, 286, 338, 390];
 const COLS = Array.from({ length: 48 }, (_, i) => +(34 + i * (456 / 47)).toFixed(3));
@@ -38,7 +39,7 @@ const TEXTAREA_STYLE: React.CSSProperties = {
   color: '#233a55',
   lineHeight: '52px',
   letterSpacing: '-0.72px',
-  caretColor: '#ff7031',
+  caretColor: 'transparent',
   padding: 0,
   overflow: 'hidden',
 };
@@ -148,7 +149,16 @@ function measureCharPositions(textarea: HTMLTextAreaElement, text: string): { do
 export default function LetterSVG({ text, onTextChange, onKeystroke }: LetterSVGProps) {
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const [activeDots, setActiveDots] = useState<Set<number>>(new Set());
+  const [caretPos, setCaretPos] = useState<{ top: number; left: number } | null>(null);
+  const [focused, setFocused] = useState(false);
   const rafRef = useRef<number>(0);
+
+  const updateCaret = useCallback(() => {
+    const ta = textareaRef.current;
+    if (!ta || document.activeElement !== ta) { setCaretPos(null); return; }
+    const coords = getCaretCoordinates(ta, ta.selectionEnd);
+    setCaretPos({ top: coords.top, left: coords.left });
+  }, []);
 
   const measure = useCallback(() => {
     const ta = textareaRef.current;
@@ -165,10 +175,26 @@ export default function LetterSVG({ text, onTextChange, onKeystroke }: LetterSVG
   useEffect(() => {
     let cancelled = false;
     document.fonts.load("24px 'ABC Gramercy'").then(() => {
-      if (!cancelled) measure();
+      if (!cancelled) { measure(); updateCaret(); }
     });
     return () => { cancelled = true; };
-  }, [measure]);
+  }, [measure, updateCaret]);
+
+  useEffect(() => {
+    const ta = textareaRef.current;
+    if (!ta) return;
+    const handler = () => updateCaret();
+    ta.addEventListener('select', handler);
+    ta.addEventListener('click', handler);
+    ta.addEventListener('keyup', handler);
+    return () => {
+      ta.removeEventListener('select', handler);
+      ta.removeEventListener('click', handler);
+      ta.removeEventListener('keyup', handler);
+    };
+  }, [updateCaret]);
+
+  useEffect(() => { updateCaret(); }, [text, updateCaret]);
 
   const handleChange = useCallback((e: React.ChangeEvent<HTMLTextAreaElement>) => {
     const newText = e.target.value;
@@ -183,7 +209,10 @@ export default function LetterSVG({ text, onTextChange, onKeystroke }: LetterSVG
 
   return (
     <div style={{ position: 'relative', width: '100%', height: '100%' }}>
-      <style>{`.letter-textarea::placeholder { color: #233a55; opacity: 0.2; }`}</style>
+      <style>{`
+        .letter-textarea::placeholder { color: #233a55; opacity: 0.2; }
+        .letter-textarea:focus::placeholder { opacity: 0; }
+      `}</style>
 
       <svg
         style={{ position: 'absolute', inset: 0, pointerEvents: 'none' }}
@@ -215,9 +244,27 @@ export default function LetterSVG({ text, onTextChange, onKeystroke }: LetterSVG
         value={text}
         onChange={handleChange}
         placeholder="Share your thoughts"
-        onClick={(e) => e.stopPropagation()}
+        onClick={(e) => { e.stopPropagation(); updateCaret(); }}
+        onFocus={() => { setFocused(true); updateCaret(); }}
+        onBlur={() => { setFocused(false); setCaretPos(null); }}
+        onKeyDown={() => requestAnimationFrame(updateCaret)}
         style={TEXTAREA_STYLE}
       />
+
+      {focused && caretPos && (
+        <div
+          style={{
+            position: 'absolute',
+            left: 32 + caretPos.left + 2,
+            top: 34 + caretPos.top + 8,
+            width: 6,
+            height: 22,
+            borderRadius: 3,
+            backgroundColor: '#FF7031',
+            pointerEvents: 'none',
+          }}
+        />
+      )}
 
       <p style={REGARDS_STYLE}>REGARDS,</p>
       <p style={NAME_STYLE}>Your Name (or email)</p>
