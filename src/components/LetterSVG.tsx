@@ -20,7 +20,7 @@ const COPY_PROPS = [
 interface LetterSVGProps {
   text: string;
   onTextChange: (text: string) => void;
-  onKeystroke?: () => void;
+  onKeystroke?: (isSpace: boolean) => void;
 }
 
 const TEXTAREA_STYLE: React.CSSProperties = {
@@ -176,7 +176,7 @@ export default function LetterSVG({ text, onTextChange, onKeystroke }: LetterSVG
     const ta = textareaRef.current;
     if (!ta) return;
     const { overflows } = measureCharPositions(ta, newText);
-    if (!overflows) { onTextChange(newText); onKeystroke?.(); }
+    if (!overflows) { onTextChange(newText); onKeystroke?.(newText.slice(text.length) === ' '); }
   }, [text, onTextChange, onKeystroke]);
 
   return (

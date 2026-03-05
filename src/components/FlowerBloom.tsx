@@ -198,6 +198,10 @@ MSG_DOTS.forEach((dot, i) => {
   }
 });
 const RIGHT_DOT_INDICES = [...DOT_MIRRORS.keys()];
+const CENTER_ROW_INDICES = MSG_DOTS.reduce<number[]>((acc, dot, i) => {
+  if (Math.abs(dot.y + 24.28) < 0.01) acc.push(i);
+  return acc;
+}, []);
 
 const SEND_BUTTON: React.CSSProperties = {
   width: 185,
@@ -304,20 +308,32 @@ export default function FlowerBloom() {
     return () => observer.disconnect();
   }, [updateScale]);
 
-  const handleKeystrokeGlow = useCallback(() => {
-    if (RIGHT_DOT_INDICES.length === 0) return;
-    const rightIdx = RIGHT_DOT_INDICES[Math.floor(Math.random() * RIGHT_DOT_INDICES.length)];
-    const leftIdx = DOT_MIRRORS.get(rightIdx)!;
-    setGlowingDots(prev => new Set([...prev, rightIdx, leftIdx]));
-    const timeout = window.setTimeout(() => {
-      setGlowingDots(prev => {
-        const next = new Set(prev);
-        next.delete(rightIdx);
-        next.delete(leftIdx);
-        return next;
-      });
-    }, 600);
-    glowTimeouts.current.push(timeout);
+  const handleKeystrokeGlow = useCallback((isSpace: boolean) => {
+    if (isSpace) {
+      setGlowingDots(prev => new Set([...prev, ...CENTER_ROW_INDICES]));
+      const timeout = window.setTimeout(() => {
+        setGlowingDots(prev => {
+          const next = new Set(prev);
+          CENTER_ROW_INDICES.forEach(i => next.delete(i));
+          return next;
+        });
+      }, 600);
+      glowTimeouts.current.push(timeout);
+    } else {
+      if (RIGHT_DOT_INDICES.length === 0) return;
+      const rightIdx = RIGHT_DOT_INDICES[Math.floor(Math.random() * RIGHT_DOT_INDICES.length)];
+      const leftIdx = DOT_MIRRORS.get(rightIdx)!;
+      setGlowingDots(prev => new Set([...prev, rightIdx, leftIdx]));
+      const timeout = window.setTimeout(() => {
+        setGlowingDots(prev => {
+          const next = new Set(prev);
+          next.delete(rightIdx);
+          next.delete(leftIdx);
+          return next;
+        });
+      }, 600);
+      glowTimeouts.current.push(timeout);
+    }
   }, []);
 
   useEffect(() => {
@@ -399,6 +415,7 @@ export default function FlowerBloom() {
                 height: 8,
                 borderRadius: 2,
                 backgroundColor: isGlowing ? '#ff7031' : '#48617f',
+                transition: 'background-color 0.3s',
                 left: `calc(50% + ${dot.x - 4}px)`,
                 top: `calc(50% + ${dot.y - 4}px)`,
               }}
