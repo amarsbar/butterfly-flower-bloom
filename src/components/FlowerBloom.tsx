@@ -353,8 +353,8 @@ export default function FlowerBloom() {
   return (
     <div
       ref={containerRef}
-      className={`relative flex items-center justify-center w-full h-svh bg-[#f6f6fa] overflow-hidden${page !== "menu" ? " cursor-pointer" : ""}`}
-      onClick={() => { if (page !== "menu") setPage("menu"); }}
+      className={`relative flex items-center justify-center w-full h-svh bg-[#f6f6fa] overflow-hidden${page === "note" ? " cursor-pointer" : ""}`}
+      onClick={() => { if (page === "note") setPage("menu"); }}
     >
       <motion.div
         className="relative flex items-center justify-center"
@@ -393,8 +393,13 @@ export default function FlowerBloom() {
             custom={accent}
             variants={accentVariants}
             className="absolute z-20"
-            {...(i === 0 ? { onClick: () => setPage("message"), style: { cursor: 'pointer' } } : {})}
-            {...(i === 1 ? { onClick: () => setPage("note"), style: { cursor: 'pointer' } } : {})}
+            onClick={(e: React.MouseEvent) => {
+              e.stopPropagation();
+              if (page === "message") setPage("menu");
+              else if (page === "menu" && i === 0) setPage("message");
+              else if (page === "menu" && i === 1) setPage("note");
+            }}
+            style={{ cursor: 'pointer' }}
           />
         ))}
 
