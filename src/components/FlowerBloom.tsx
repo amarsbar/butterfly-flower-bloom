@@ -203,12 +203,12 @@ const COUNTER_BOX: React.CSSProperties = {
 
 // --- Components ---
 
-function CharCounter({ count, total }: { count: number; total: number }) {
-  const chars = [...String(count).padStart(String(total).length, '0'), '/', ...String(total)];
+function CharCounter({ count }: { count: number }) {
+  const chars = [...String(count).padStart(3, '0')];
   return (
     <div style={{ display: 'flex', gap: 4 }}>
       {chars.map((ch, i) => (
-        <div key={i} style={{ ...COUNTER_BOX, backgroundColor: ch === '/' ? '#94b8d0' : '#bed8de' }}>
+        <div key={i} style={{ ...COUNTER_BOX, backgroundColor: '#bed8de' }}>
           {ch}
         </div>
       ))}
@@ -249,6 +249,7 @@ function DotCluster({ activePage }: { activePage: Page }) {
 
 export default function FlowerBloom() {
   const [page, setPage] = useState<Page>("menu");
+  const [messageText, setMessageText] = useState("");
   const [scale, setScale] = useState(1);
   const containerRef = useRef<HTMLDivElement>(null);
 
@@ -300,7 +301,7 @@ export default function FlowerBloom() {
         {/* Center shape */}
         <motion.div className="absolute z-10 overflow-hidden" variants={centerVariants}>
           <motion.div className="w-full h-full" variants={letterVariants}>
-            <LetterSVG />
+            <LetterSVG text={messageText} onTextChange={setMessageText} />
           </motion.div>
         </motion.div>
 
@@ -342,7 +343,7 @@ export default function FlowerBloom() {
         {/* Character counters */}
         {COUNTER_POSITIONS.map((pos, i) => (
           <motion.div key={`counter-${i}`} custom={pos} variants={counterVariants} className="absolute">
-            <CharCounter count={0} total={336} />
+            <CharCounter count={messageText.length} />
           </motion.div>
         ))}
 
