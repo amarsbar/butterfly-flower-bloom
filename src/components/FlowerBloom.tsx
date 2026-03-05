@@ -2,8 +2,11 @@
 
 import { useState, useEffect, useRef, useCallback } from "react";
 import { motion } from "motion/react";
+import LetterSVG from "./LetterSVG";
 
-type Page = "menu" | "note";
+type Page = "menu" | "note" | "message";
+
+const PAGE_VARIANT: Record<Page, string> = { menu: "seed", note: "bloom", message: "message" };
 
 const DESIGN_W = 1728;
 const DESIGN_H = 1117;
@@ -18,15 +21,15 @@ const PETALS = [
 
 // Diamond size is 39.04x39.04 (the 55.21 in metadata was the rotated bounding box)
 const ACCENTS = [
-  { initialX: 0, initialY: -73.50, finalX: -0.12, finalY: -401.90, initialRotate: 0 },
-  { initialX: 75.49, initialY: 0.50, finalX: 402.16, finalY: 0.38, initialRotate: -15 },
-  { initialX: 0, initialY: 73.02, finalX: -0.12, finalY: 402.66, initialRotate: 0 },
-  { initialX: -75.52, initialY: 0.50, finalX: -402.40, finalY: 0.38, initialRotate: 45 },
+  { initialX: 0, initialY: -73.50, finalX: -0.12, finalY: -401.90, msgX: 0, msgY: -514.9, initialRotate: 0 },
+  { initialX: 75.49, initialY: 0.50, finalX: 402.16, finalY: 0.38, msgX: 820.61, msgY: -21.89, initialRotate: -15 },
+  { initialX: 0, initialY: 73.02, finalX: -0.12, finalY: 402.66, msgX: 0, msgY: 515.1, initialRotate: 0 },
+  { initialX: -75.52, initialY: 0.50, finalX: -402.40, finalY: 0.38, msgX: -820.39, msgY: -21.89, initialRotate: 45 },
 ];
 
 // Navigation cluster (cross pattern): center = menu, right = note
 const NAV_DOTS = [
-  { cx: 27.5, cy: 7.5, page: null },
+  { cx: 27.5, cy: 7.5, page: "message" as Page },
   { cx: 7.5, cy: 26.5, page: null },
   { cx: 27.5, cy: 26.5, page: "menu" as Page },
   { cx: 47.5, cy: 26.5, page: "note" as Page },
@@ -45,6 +48,7 @@ const centerSeedTransition = { duration: 0.15, ease: centerEase, delay: 0.15 };
 const centerVariants = {
   seed:  { width: 66, height: 66, borderRadius: 32, backgroundColor: "#d2ecf2", transition: centerSeedTransition },
   bloom: { width: 463.595, height: 463.595, borderRadius: 26.026, backgroundColor: "#feefff", transition: centerTransition },
+  message: { width: 524, height: 529, borderRadius: 32, backgroundColor: "#d2ecf2", transition: centerTransition },
 };
 
 const petalEase = [0.06, 0.06, 0.51, 1.1] as const;
@@ -63,9 +67,11 @@ const petalSeedTransition = {
 const petalVariants = {
   seed:  { x: 0, y: 0, opacity: 0, transition: petalSeedTransition },
   bloom: (p: Petal) => ({ x: p.x, y: p.y, opacity: 1, transition: petalTransition }),
+  message: { x: 0, y: 0, opacity: 0, transition: petalSeedTransition },
 };
 
 const accentSpring = { type: "spring" as const, stiffness: 131.6, damping: 21.2, mass: 2 };
+const msgSpring = { type: "spring" as const, stiffness: 131.6, damping: 40, mass: 2 };
 const accentSeedSpring = { type: "spring" as const, stiffness: 300, damping: 30, mass: 2, delay: 0.15 };
 
 const accentVariants = {
@@ -78,6 +84,11 @@ const accentVariants = {
     width: 39.04, height: 39.04, x: a.finalX, y: a.finalY,
     rotate: 45, borderRadius: 9.76, backgroundColor: "#ff7031",
     transition: accentSpring,
+  }),
+  message: (a: Accent) => ({
+    width: 39.04, height: 39.04, x: a.msgX, y: a.msgY,
+    rotate: 135, borderRadius: 9.76, backgroundColor: "#9C84F4",
+    transition: msgSpring,
   }),
 };
 
@@ -100,7 +111,7 @@ const labelPos = (transform: string): React.CSSProperties => ({
 // Offsets from design center (864, 558.5): Message above top dot, Note right of
 // right dot, Readings left of left dot, About below bottom dot
 const LABELS: { text: string; page?: Page; style: React.CSSProperties }[] = [
-  { text: "Message", style: labelPos('translate(-50%, -109.5px)') },
+  { text: "Message", page: "message" as Page, style: labelPos('translate(-50%, -109.5px)') },
   { text: "Readings", style: labelPos('translate(calc(-100% - 91px), -9.5px)') },
   { text: "Note", page: "note", style: labelPos('translate(95px, -8.5px)') },
   { text: "About", style: labelPos('translate(-50%, 91.5px)') },
@@ -109,9 +120,56 @@ const LABELS: { text: string; page?: Page; style: React.CSSProperties }[] = [
 const labelVariants = {
   seed: { opacity: 1, transition: { duration: 0.3, delay: 0.5 } },
   bloom: { opacity: 0, transition: { duration: 0.15 } },
+  message: { opacity: 0, transition: { duration: 0.15 } },
+};
+
+const letterVariants = {
+  seed: { opacity: 0, transition: { duration: 0.15 } },
+  bloom: { opacity: 0, transition: { duration: 0.15 } },
+  message: { opacity: 1, transition: { duration: 0.2, delay: 0.15 } },
+};
+
+const COUNTER_POSITIONS = [
+  { x: -632, y: -24 },
+  { x: 630, y: -24 },
+];
+
+type CounterPos = (typeof COUNTER_POSITIONS)[number];
+
+const counterVariants = {
+  seed: { x: 0, y: 0, opacity: 0, transition: accentSeedSpring },
+  bloom: { x: 0, y: 0, opacity: 0, transition: accentSeedSpring },
+  message: (p: CounterPos) => ({ x: p.x, y: p.y, opacity: 1, transition: msgSpring }),
+};
+
+const COUNTER_BOX: React.CSSProperties = {
+  width: 13,
+  padding: 2,
+  borderRadius: 4,
+  display: 'flex',
+  alignItems: 'center',
+  justifyContent: 'center',
+  fontFamily: "'Akkurat Mono', monospace",
+  fontSize: 13,
+  color: 'black',
+  letterSpacing: '-0.39px',
+  lineHeight: 1,
 };
 
 // --- Components ---
+
+function CharCounter({ count, total }: { count: number; total: number }) {
+  const chars = [...String(count).padStart(String(total).length, '0'), '/', ...String(total)];
+  return (
+    <div style={{ display: 'flex', gap: 4 }}>
+      {chars.map((ch, i) => (
+        <div key={i} style={{ ...COUNTER_BOX, backgroundColor: ch === '/' ? '#94b8d0' : '#bed8de' }}>
+          {ch}
+        </div>
+      ))}
+    </div>
+  );
+}
 
 function DotCluster({ activePage }: { activePage: Page }) {
   return (
@@ -168,8 +226,8 @@ export default function FlowerBloom() {
   return (
     <div
       ref={containerRef}
-      className={`relative flex items-center justify-center w-full h-svh bg-[#f6f6fa] overflow-hidden${page === "note" ? " cursor-pointer" : ""}`}
-      onClick={() => { if (page === "note") setPage("menu"); }}
+      className={`relative flex items-center justify-center w-full h-svh bg-[#f6f6fa] overflow-hidden${page !== "menu" ? " cursor-pointer" : ""}`}
+      onClick={() => { if (page !== "menu") setPage("menu"); }}
     >
       <motion.div
         className="relative flex items-center justify-center"
@@ -181,7 +239,7 @@ export default function FlowerBloom() {
           margin: `${-(DESIGN_H * (1 - scale)) / 2}px ${-(DESIGN_W * (1 - scale)) / 2}px`,
         }}
         initial={false}
-        animate={page === "note" ? "bloom" : "seed"}
+        animate={PAGE_VARIANT[page]}
       >
         {/* Petals */}
         {PETALS.map((petal, i) => (
@@ -195,7 +253,11 @@ export default function FlowerBloom() {
         ))}
 
         {/* Center shape */}
-        <motion.div className="absolute z-10" variants={centerVariants} />
+        <motion.div className="absolute z-10 overflow-hidden" variants={centerVariants}>
+          <motion.div className="w-full h-full" variants={letterVariants}>
+            <LetterSVG />
+          </motion.div>
+        </motion.div>
 
         {/* Accent diamonds */}
         {ACCENTS.map((accent, i) => (
@@ -204,8 +266,16 @@ export default function FlowerBloom() {
             custom={accent}
             variants={accentVariants}
             className="absolute z-20"
+            {...(i === 0 ? { onClick: () => setPage("message"), style: { cursor: 'pointer' } } : {})}
             {...(i === 1 ? { onClick: () => setPage("note"), style: { cursor: 'pointer' } } : {})}
           />
+        ))}
+
+        {/* Character counters */}
+        {COUNTER_POSITIONS.map((pos, i) => (
+          <motion.div key={`counter-${i}`} custom={pos} variants={counterVariants} className="absolute">
+            <CharCounter count={0} total={336} />
+          </motion.div>
         ))}
 
         {/* Labels */}
