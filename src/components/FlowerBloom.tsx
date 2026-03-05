@@ -130,6 +130,24 @@ const letterVariants = {
   message: { opacity: 1, transition: { duration: 0.2, delay: 0.15 } },
 };
 
+const MSG_TITLE_STYLE: React.CSSProperties = {
+  fontFamily: "'ABC Gramercy', serif",
+  fontWeight: 300,
+  fontStyle: 'italic',
+  fontSize: 90,
+  color: '#48617f',
+  letterSpacing: '-2.7px',
+  lineHeight: 1,
+  whiteSpace: 'nowrap',
+  userSelect: 'none',
+};
+
+const msgTitleVariants = {
+  seed: { opacity: 0, transition: { duration: 0, delay: 0 } },
+  bloom: { opacity: 0, transition: { duration: 0, delay: 0 } },
+  message: { opacity: 1, transition: { duration: 0, delay: 0.35 } },
+};
+
 const COUNTER_POSITIONS = [
   { x: -632, y: -24 },
   { x: 630, y: -24 },
@@ -271,6 +289,11 @@ export default function FlowerBloom() {
             {...(i === 1 ? { onClick: () => setPage("note"), style: { cursor: 'pointer' } } : {})}
           />
         ))}
+
+        {/* Message title */}
+        <div style={{ ...labelPos('translate(-50%, -341.5px)'), zIndex: 11 }}>
+          <motion.p variants={msgTitleVariants} style={MSG_TITLE_STYLE}>Message</motion.p>
+        </div>
 
         {/* Character counters */}
         {COUNTER_POSITIONS.map((pos, i) => (
