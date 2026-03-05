@@ -184,33 +184,6 @@ const MSG_DOT_COLS: [number, number[]][] = [
   [462, [-24.28]],
 ];
 
-type MsgDot = { x: number; y: number; col: number };
-
-const MSG_DOTS: MsgDot[] = MSG_DOT_COLS.flatMap(([colX, rows], col) =>
-  rows.flatMap(y => [
-    { x: colX, y, col },
-    { x: -colX, y, col },
-  ])
-);
-
-
-
-// Build right→left mirror index map (horizontal inversion: x ↔ -x)
-const DOT_MIRRORS = new Map<number, number>();
-MSG_DOTS.forEach((dot, i) => {
-  if (dot.x > 0) {
-    const mirrorIdx = MSG_DOTS.findIndex(
-      (d, j) => j !== i && d.x === -dot.x && Math.abs(d.y - dot.y) < 0.01
-    );
-    if (mirrorIdx >= 0) DOT_MIRRORS.set(i, mirrorIdx);
-  }
-});
-const RIGHT_DOT_INDICES = [...DOT_MIRRORS.keys()];
-const CENTER_ROW_INDICES = MSG_DOTS.reduce<number[]>((acc, dot, i) => {
-  if (Math.abs(dot.y + 24.28) < 0.01) acc.push(i);
-  return acc;
-}, []);
-
 const MOBILE_DOT_COLS: [number, number[]][] = [
   [152.7, [149.4]],
   [187.5, [113.2, 149.4, 185.6]],
@@ -218,27 +191,33 @@ const MOBILE_DOT_COLS: [number, number[]][] = [
   [257.0, [113.2, 149.4, 185.6]],
 ];
 
-const MOBILE_DOTS: MsgDot[] = MOBILE_DOT_COLS.flatMap(([colX, rows], col) =>
-  rows.flatMap(y => [
-    { x: colX, y, col },
-    { x: -colX, y, col },
-  ])
-);
+type MsgDot = { x: number; y: number; col: number };
 
-const MOBILE_DOT_MIRRORS = new Map<number, number>();
-MOBILE_DOTS.forEach((dot, i) => {
-  if (dot.x > 0) {
-    const mirrorIdx = MOBILE_DOTS.findIndex(
-      (d, j) => j !== i && d.x === -dot.x && Math.abs(d.y - dot.y) < 0.01
-    );
-    if (mirrorIdx >= 0) MOBILE_DOT_MIRRORS.set(i, mirrorIdx);
-  }
-});
-const MOBILE_RIGHT_DOT_INDICES = [...MOBILE_DOT_MIRRORS.keys()];
-const MOBILE_CENTER_ROW_INDICES = MOBILE_DOTS.reduce<number[]>((acc, dot, i) => {
-  if (Math.abs(dot.y - 149.4) < 0.01) acc.push(i);
-  return acc;
-}, []);
+function createDotGrid(cols: [number, number[]][], centerY: number) {
+  const dots: MsgDot[] = cols.flatMap(([colX, rows], col) =>
+    rows.flatMap(y => [{ x: colX, y, col }, { x: -colX, y, col }])
+  );
+  const mirrors = new Map<number, number>();
+  dots.forEach((dot, i) => {
+    if (dot.x > 0) {
+      const mirrorIdx = dots.findIndex(d => d !== dot && d.x === -dot.x && Math.abs(d.y - dot.y) < 0.01);
+      if (mirrorIdx >= 0) mirrors.set(i, mirrorIdx);
+    }
+  });
+
+  return {
+    dots,
+    mirrors,
+    rightIndices: [...mirrors.keys()],
+    centerRowIndices: dots.reduce<number[]>((acc, dot, i) => {
+      if (Math.abs(dot.y - centerY) < 0.01) acc.push(i);
+      return acc;
+    }, [])
+  };
+}
+
+const DESKTOP_GRID = createDotGrid(MSG_DOT_COLS, -24.28);
+const MOBILE_GRID = createDotGrid(MOBILE_DOT_COLS, 149.4);
 
 const SEND_BUTTON: React.CSSProperties = {
   width: 185,
@@ -335,8 +314,7 @@ export default function FlowerBloom() {
   const [isFocused, setIsFocused] = useState(false);
   const [glowingDots, setGlowingDots] = useState<Set<number>>(new Set());
   const [orangeDots, setOrangeDots] = useState<Set<number>>(new Set());
-  const [dotsCascaded, setDotsCascaded] = useState(false);
-  const [mobileDotsCascaded, setMobileDotsCascaded] = useState(false);
+  const [cascaded, setCascaded] = useState(false);
   const containerRef = useRef<HTMLDivElement>(null);
   const dotTimers = useRef<Map<number, number>>(new Map());
   const colorTimers = useRef<Map<number, number>>(new Map());
@@ -399,9 +377,9 @@ export default function FlowerBloom() {
   }, []);
 
   const handleKeystrokeGlow = useCallback((isSpace: boolean) => {
-    const activeRightIndices = isMobile && isFocused ? MOBILE_RIGHT_DOT_INDICES : RIGHT_DOT_INDICES;
-    const activeMirrors = isMobile && isFocused ? MOBILE_DOT_MIRRORS : DOT_MIRRORS;
-    const activeCenter = isMobile && isFocused ? MOBILE_CENTER_ROW_INDICES : CENTER_ROW_INDICES;
+    const activeRightIndices = isMobile && isFocused ? MOBILE_GRID.rightIndices : DESKTOP_GRID.rightIndices;
+    const activeMirrors = isMobile && isFocused ? MOBILE_GRID.mirrors : DESKTOP_GRID.mirrors;
+    const activeCenter = isMobile && isFocused ? MOBILE_GRID.centerRowIndices : DESKTOP_GRID.centerRowIndices;
 
     if (isSpace) {
       flashDots(activeCenter);
@@ -432,23 +410,18 @@ export default function FlowerBloom() {
     };
   }, []);
 
-  useEffect(() => {
-    if (page === 'message') {
-      const timer = setTimeout(() => setDotsCascaded(true), 2000);
-      return () => clearTimeout(timer);
-    } else {
-      setDotsCascaded(false);
-    }
-  }, [page]);
+  const isDesktopActive = page === 'message' && !isMobile;
+  const isMobileActive = page === 'message' && isMobile && isFocused;
+  const isDotsActive = isDesktopActive || isMobileActive;
 
   useEffect(() => {
-    if (isFocused && isMobile) {
-      const timer = setTimeout(() => setMobileDotsCascaded(true), 1200);
+    if (isDotsActive) {
+      const timer = setTimeout(() => setCascaded(true), isMobileActive ? 1200 : 2000);
       return () => clearTimeout(timer);
     } else {
-      setMobileDotsCascaded(false);
+      setCascaded(false);
     }
-  }, [isFocused, isMobile]);
+  }, [isDotsActive, isMobileActive]);
 
   return (
     <div
@@ -508,53 +481,31 @@ export default function FlowerBloom() {
           <motion.p custom={{ isMobile, isFocused }} variants={msgTitleVariants} style={MSG_TITLE_STYLE}>Message</motion.p>
         </div>
 
-        {/* Decorative dots (Desktop) */}
-        {!isMobile && MSG_DOTS.map((dot, i) => {
+        {/* Decorative dots */}
+        {(isMobile ? MOBILE_GRID.dots : DESKTOP_GRID.dots).map((dot, i) => {
           const isGlowing = glowingDots.has(i);
-          return (
-            <motion.div
-              key={`msg-dot-${i}`}
-              className="absolute"
-              initial={{ opacity: 0 }}
-              animate={{ opacity: page === 'message' ? (isGlowing ? 1 : 0.2) : 0 }}
-              transition={{
-                duration: (isGlowing || dotsCascaded) ? 0.3 : 0,
-                ease: "linear",
-                delay: page === 'message' ? (isGlowing || dotsCascaded ? 0 : 0.5 + dot.col * 0.12) : 0
-              }}
-              style={{
-                width: 8,
-                height: 8,
-                borderRadius: 2,
-                backgroundColor: orangeDots.has(i) ? '#ff7031' : '#48617f',
-                left: `calc(50% + ${dot.x - 4}px)`,
-                top: `calc(50% + ${dot.y - 4}px)`,
-              }}
-            />
-          );
-        })}
+          const size = isMobile ? 11.6 : 8;
+          const radius = size / 2;
+          const initialDelayBase = isMobile ? 0.3 : 0.5;
 
-        {/* Decorative dots (Mobile) */}
-        {isMobile && isFocused && MOBILE_DOTS.map((dot, i) => {
-          const isGlowing = glowingDots.has(i);
           return (
             <motion.div
-              key={`mobile-msg-dot-${i}`}
+              key={`${isMobile ? 'm-' : 'd-'}dot-${i}`}
               className="absolute"
               initial={{ opacity: 0 }}
-              animate={{ opacity: isGlowing ? 1 : 0.2 }}
+              animate={{ opacity: isDotsActive ? (isGlowing ? 1 : 0.2) : 0 }}
               transition={{
-                duration: (isGlowing || mobileDotsCascaded) ? 0.3 : 0,
+                duration: (isGlowing || cascaded) ? 0.3 : 0,
                 ease: "linear",
-                delay: isGlowing || mobileDotsCascaded ? 0 : 0.3 + dot.col * 0.12
+                delay: isDotsActive ? (isGlowing || cascaded ? 0 : initialDelayBase + dot.col * 0.12) : 0
               }}
               style={{
-                width: 11.6,
-                height: 11.6,
-                borderRadius: 2.9,
+                width: size,
+                height: size,
+                borderRadius: size / 4,
                 backgroundColor: orangeDots.has(i) ? '#ff7031' : '#48617f',
-                left: `calc(50% + ${dot.x - 5.8}px)`,
-                top: `calc(50% + ${dot.y - 5.8}px)`,
+                left: `calc(50% + ${dot.x - radius}px)`,
+                top: `calc(50% + ${dot.y - radius}px)`,
               }}
             />
           );
