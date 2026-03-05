@@ -50,7 +50,7 @@ const centerVariants = {
   bloom: { width: 463.595, height: 463.595, borderRadius: 26.026, backgroundColor: "#feefff", transition: centerTransition },
   message: (custom: { isMobile: boolean; isFocused: boolean } | undefined) => ({
     width: 524, height: 529, borderRadius: 32, backgroundColor: "#d2ecf2",
-    y: custom?.isMobile && custom?.isFocused ? -180 : 0,
+    y: custom?.isMobile && custom?.isFocused ? -230 : 0,
     transition: centerTransition
   }),
 };
@@ -153,7 +153,7 @@ const msgTitleVariants = {
   bloom: { opacity: 0, y: 0, transition: { duration: 0, delay: 0 } },
   message: (custom: { isMobile: boolean; isFocused: boolean } | undefined) => ({
     opacity: 1,
-    y: custom?.isMobile && custom?.isFocused ? -180 : 0,
+    y: custom?.isMobile && custom?.isFocused ? -230 : 0,
     transition: {
       y: centerTransition,
       opacity: { duration: 0, delay: 0.35 }
@@ -185,10 +185,10 @@ const MSG_DOT_COLS: [number, number[]][] = [
 ];
 
 const MOBILE_DOT_COLS: [number, number[]][] = [
-  [152.7, [149.4]],
-  [187.5, [113.2, 149.4, 185.6]],
-  [222.2, [113.2, 149.4, 185.6]],
-  [257.0, [113.2, 149.4, 185.6]],
+  [152.7, [99.4]],
+  [187.5, [63.2, 99.4, 135.6]],
+  [222.2, [63.2, 99.4, 135.6]],
+  [257.0, [63.2, 99.4, 135.6]],
 ];
 
 type MsgDot = { x: number; y: number; col: number };
@@ -217,7 +217,7 @@ function createDotGrid(cols: [number, number[]][], centerY: number) {
 }
 
 const DESKTOP_GRID = createDotGrid(MSG_DOT_COLS, -24.28);
-const MOBILE_GRID = createDotGrid(MOBILE_DOT_COLS, 149.4);
+const MOBILE_GRID = createDotGrid(MOBILE_DOT_COLS, 99.4);
 
 const SEND_BUTTON: React.CSSProperties = {
   width: 185,
@@ -236,13 +236,13 @@ const SEND_BUTTON: React.CSSProperties = {
 
 const sendVariants = {
   hidden: (c: { isMobile?: boolean, isFocused?: boolean }) => ({
-    y: c?.isMobile && c?.isFocused ? -180 : 0,
+    y: c?.isMobile && c?.isFocused ? -230 : 0,
     opacity: 0,
     transition: { duration: 0 }
   }),
   visibleDesktop: { y: 315, opacity: 1, transition: msgSpring },
   visibleMobileUnfocused: { y: 330, opacity: 1, transition: msgSpring },
-  visibleMobileFocused: { y: 149.4, opacity: 1, transition: msgSpring },
+  visibleMobileFocused: { y: 99.4, opacity: 1, transition: msgSpring },
 };
 
 const COUNTER_BOX: React.CSSProperties = {
@@ -495,7 +495,7 @@ export default function FlowerBloom() {
               initial={{ opacity: 0 }}
               animate={{ opacity: isDotsActive ? (isGlowing ? 1 : 0.2) : 0 }}
               transition={{
-                duration: (isGlowing || cascaded) ? 0.3 : 0,
+                duration: isDotsActive ? ((isGlowing || cascaded) ? 0.3 : 0) : 0,
                 ease: "linear",
                 delay: isDotsActive ? (isGlowing || cascaded ? 0 : initialDelayBase + dot.col * 0.12) : 0
               }}
