@@ -137,15 +137,8 @@ const letterVariants = {
 };
 
 const MSG_TITLE_STYLE: React.CSSProperties = {
-  fontFamily: "'ABC Gramercy', serif",
-  fontWeight: 300,
-  fontStyle: 'italic',
-  fontSize: 90,
-  color: '#48617f',
-  letterSpacing: '-2.7px',
-  lineHeight: 1,
-  whiteSpace: 'nowrap',
-  userSelect: 'none',
+  fontFamily: "'ABC Gramercy', serif", fontWeight: 300, fontStyle: 'italic', fontSize: 90,
+  color: '#48617f', letterSpacing: '-2.7px', lineHeight: 1, whiteSpace: 'nowrap', userSelect: 'none',
 };
 
 const msgTitleVariants = {
@@ -220,19 +213,9 @@ const DESKTOP_GRID = createDotGrid(MSG_DOT_COLS, -24.28);
 const MOBILE_GRID = createDotGrid(MOBILE_DOT_COLS, 99.4);
 
 const SEND_BUTTON: React.CSSProperties = {
-  width: 167,
-  height: 58,
-  borderRadius: 1000,
-  backgroundColor: '#ff7031',
-  display: 'flex',
-  alignItems: 'center',
-  justifyContent: 'center',
-  fontFamily: "'ABC Gramercy', serif",
-  fontSize: 24,
-  color: '#d2ecf2',
-  letterSpacing: '-0.72px',
-  cursor: 'pointer',
-  userSelect: 'none',
+  width: 167, height: 58, borderRadius: 1000, backgroundColor: '#ff7031', display: 'flex', alignItems: 'center',
+  justifyContent: 'center', fontFamily: "'ABC Gramercy', serif", fontSize: 24, color: '#d2ecf2', letterSpacing: '-0.72px',
+  cursor: 'pointer', userSelect: 'none',
 };
 
 const sendVariants = {
@@ -248,18 +231,9 @@ const sendVariants = {
 };
 
 const COUNTER_BOX: React.CSSProperties = {
-  width: 13,
-  padding: 2,
-  borderRadius: 4,
-  display: 'flex',
-  alignItems: 'center',
-  justifyContent: 'center',
-  fontFamily: "'Akkurat Mono', monospace",
-  fontSize: 13,
-  color: 'black',
-  letterSpacing: '-0.39px',
-  lineHeight: 1,
-  userSelect: 'none',
+  width: 13, padding: 2, borderRadius: 4, display: 'flex', alignItems: 'center', justifyContent: 'center',
+  fontFamily: "'Akkurat Mono', monospace", fontSize: 13, color: 'black', letterSpacing: '-0.39px',
+  lineHeight: 1, userSelect: 'none',
 };
 
 // --- Components ---
@@ -326,13 +300,7 @@ export default function FlowerBloom() {
     if (!el) return;
     const isPortrait = el.clientHeight > el.clientWidth;
     setIsMobile(isPortrait);
-    if (isPortrait) {
-      const scaleW = el.clientWidth / 569;
-      const scaleH = el.clientHeight / 1234;
-      setScale(Math.min(scaleW, scaleH));
-    } else {
-      setScale(Math.min(el.clientWidth / DESIGN_W, el.clientHeight / DESIGN_H));
-    }
+    setScale(Math.min(el.clientWidth / (isPortrait ? 569 : DESIGN_W), el.clientHeight / (isPortrait ? 1234 : DESIGN_H)));
   }, []);
 
   useEffect(() => {
@@ -370,33 +338,22 @@ export default function FlowerBloom() {
 
   useEffect(() => {
     if (page !== 'message') {
-      setGlowingDots(new Set());
-      setOrangeDots(new Set());
-      dotTimers.current.forEach(clearTimeout);
-      dotTimers.current.clear();
-      colorTimers.current.forEach(clearTimeout);
-      colorTimers.current.clear();
+      setGlowingDots(new Set()); setOrangeDots(new Set());
+      dotTimers.current.forEach(clearTimeout); dotTimers.current.clear();
+      colorTimers.current.forEach(clearTimeout); colorTimers.current.clear();
     }
+    return () => {
+      dotTimers.current.forEach(clearTimeout); colorTimers.current.forEach(clearTimeout);
+    };
   }, [page]);
 
-  useEffect(() => {
-    return () => {
-      dotTimers.current.forEach(clearTimeout);
-      colorTimers.current.forEach(clearTimeout);
-    };
-  }, []);
-
-  const isDesktopActive = page === 'message' && !isMobile;
   const isMobileActive = page === 'message' && isMobile && isFocused;
-  const isDotsActive = isDesktopActive || isMobileActive;
+  const isDotsActive = (page === 'message' && !isMobile) || isMobileActive;
 
   useEffect(() => {
-    if (isDotsActive) {
-      const timer = setTimeout(() => setCascaded(true), isMobileActive ? 1200 : 2000);
-      return () => clearTimeout(timer);
-    } else {
-      setCascaded(false);
-    }
+    if (!isDotsActive) return setCascaded(false);
+    const timer = setTimeout(() => setCascaded(true), isMobileActive ? 1200 : 2000);
+    return () => clearTimeout(timer);
   }, [isDotsActive, isMobileActive]);
 
   return (

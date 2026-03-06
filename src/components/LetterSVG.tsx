@@ -16,23 +16,16 @@ interface LetterSVGProps {
 }
 
 const TEXTAREA_STYLE: React.CSSProperties = {
-  position: 'absolute', left: 32, top: 34, width: 460, height: 364,
-  background: 'transparent', border: 'none', outline: 'none', resize: 'none',
-  fontFamily: "'ABC Gramercy', serif", fontSize: 24, color: '#233a55',
-  lineHeight: '52px', letterSpacing: '-0.72px', caretColor: 'transparent',
-  padding: 0, overflow: 'hidden',
+  position: 'absolute', left: 32, top: 34, width: 460, height: 364, background: 'transparent', border: 'none', outline: 'none', resize: 'none',
+  fontFamily: "'ABC Gramercy', serif", fontSize: 24, color: '#233a55', lineHeight: '52px', letterSpacing: '-0.72px', caretColor: 'transparent', padding: 0, overflow: 'hidden',
 };
 
 const REGARDS_STYLE: React.CSSProperties = {
-  position: 'absolute', left: 32, top: 432, margin: 0,
-  fontFamily: "'Akkurat Mono', monospace", fontSize: 13, color: '#233a55',
-  letterSpacing: '-0.39px', lineHeight: 1, whiteSpace: 'nowrap', userSelect: 'none',
+  position: 'absolute', left: 32, top: 432, margin: 0, fontFamily: "'Akkurat Mono', monospace", fontSize: 13, color: '#233a55', letterSpacing: '-0.39px', lineHeight: 1, whiteSpace: 'nowrap', userSelect: 'none',
 };
 
 const NAME_STYLE: React.CSSProperties = {
-  position: 'absolute', left: 32, top: 461, margin: 0,
-  fontFamily: "'ABC Gramercy', serif", fontSize: 28, color: 'black', opacity: 0.3,
-  letterSpacing: '-0.84px', lineHeight: 1, whiteSpace: 'nowrap', userSelect: 'none',
+  position: 'absolute', left: 32, top: 461, margin: 0, fontFamily: "'ABC Gramercy', serif", fontSize: 28, color: 'black', opacity: 0.3, letterSpacing: '-0.84px', lineHeight: 1, whiteSpace: 'nowrap', userSelect: 'none',
 };
 
 function measureCharPositions(textarea: HTMLTextAreaElement, text: string): { dots: Set<number>; overflows: boolean } {
@@ -115,13 +108,9 @@ export default function LetterSVG({ text, onTextChange, onKeystroke, onFocusChan
 
   const handleChange = useCallback((e: React.ChangeEvent<HTMLTextAreaElement>) => {
     const newText = e.target.value;
-    // Always allow deletions
-    if (newText.length <= text.length) { onTextChange(newText); return; }
-    // For additions, reject if text would overflow past the last row
-    const ta = textareaRef.current;
-    if (!ta) return;
-    const { overflows } = measureCharPositions(ta, newText);
-    if (!overflows) { onTextChange(newText); onKeystroke?.(newText.slice(text.length) === ' '); }
+    if (newText.length <= text.length) return onTextChange(newText);
+    if (!textareaRef.current || measureCharPositions(textareaRef.current, newText).overflows) return;
+    onTextChange(newText); onKeystroke?.(newText.endsWith(' '));
   }, [text, onTextChange, onKeystroke]);
 
   return (
