@@ -59,7 +59,9 @@ export default function LetterSVG({ text, onTextChange, onKeystroke, onFocusChan
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const [activeDots, setActiveDots] = useState<Set<number>>(new Set());
   const [caretPos, setCaretPos] = useState<{ top: number; left: number } | null>(null);
-  const [caretOffset, setCaretOffset] = useState(8);
+  const [caretOffset] = useState(() =>
+    typeof navigator !== 'undefined' && /iPhone|iPad|iPod|Android/i.test(navigator.userAgent) ? 3 : 8
+  );
   const rafRef = useRef<number>(0);
 
   const updateCaret = useCallback(() => {
@@ -84,25 +86,16 @@ export default function LetterSVG({ text, onTextChange, onKeystroke, onFocusChan
     document.fonts.load("24px 'ABC Gramercy'").then(() => {
       if (!cancelled) { measure(); updateCaret(); }
     }).catch(() => { });
-
-    const ta = textareaRef.current;
-    if (ta) {
-      ta.addEventListener('select', updateCaret);
-      ta.addEventListener('keyup', updateCaret);
-    }
-
-    if (typeof navigator !== 'undefined' && /iPhone|iPad|iPod|Android/i.test(navigator.userAgent)) {
-      setCaretOffset(3);
-    }
-
-    return () => {
-      cancelled = true;
-      if (ta) {
-        ta.removeEventListener('select', updateCaret);
-        ta.removeEventListener('keyup', updateCaret);
-      }
-    };
+    return () => { cancelled = true; };
   }, [measure, updateCaret]);
+
+  useEffect(() => {
+    const ta = textareaRef.current;
+    if (!ta) return;
+    ta.addEventListener('select', updateCaret);
+    ta.addEventListener('keyup', updateCaret);
+    return () => { ta.removeEventListener('select', updateCaret); ta.removeEventListener('keyup', updateCaret); };
+  }, [updateCaret]);
 
   useEffect(() => {
     cancelAnimationFrame(rafRef.current);
