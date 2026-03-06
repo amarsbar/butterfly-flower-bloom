@@ -90,22 +90,21 @@ export default function LetterSVG({ text, onTextChange, onKeystroke, onFocusChan
     document.fonts.load("24px 'ABC Gramercy'").then(() => {
       if (!cancelled) { measure(); updateCaret(); }
     }).catch(() => { });
-    return () => { cancelled = true; };
-  }, [measure, updateCaret]);
 
-  useEffect(() => {
     const ta = textareaRef.current;
     if (ta) {
       ta.addEventListener('select', updateCaret);
       ta.addEventListener('keyup', updateCaret);
     }
+
     return () => {
+      cancelled = true;
       if (ta) {
         ta.removeEventListener('select', updateCaret);
         ta.removeEventListener('keyup', updateCaret);
       }
     };
-  }, [updateCaret]);
+  }, [measure, updateCaret]);
 
   useEffect(() => {
     cancelAnimationFrame(rafRef.current);

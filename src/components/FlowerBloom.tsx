@@ -343,55 +343,29 @@ export default function FlowerBloom() {
   }, [updateScale]);
 
   const flashDots = useCallback((indices: number[]) => {
-    setGlowingDots(prev => {
-      const next = new Set(prev);
-      indices.forEach(i => next.add(i));
-      return next;
-    });
-    setOrangeDots(prev => {
-      const next = new Set(prev);
-      indices.forEach(i => next.add(i));
-      return next;
-    });
+    setGlowingDots(prev => new Set([...prev, ...indices]));
+    setOrangeDots(prev => new Set([...prev, ...indices]));
     for (const i of indices) {
-      const prevDot = dotTimers.current.get(i);
-      if (prevDot !== undefined) clearTimeout(prevDot);
-      const prevColor = colorTimers.current.get(i);
-      if (prevColor !== undefined) clearTimeout(prevColor);
+      clearTimeout(dotTimers.current.get(i));
+      clearTimeout(colorTimers.current.get(i));
       dotTimers.current.set(i, window.setTimeout(() => {
         dotTimers.current.delete(i);
-        setGlowingDots(prev => {
-          const next = new Set(prev);
-          next.delete(i);
-          return next;
-        });
-        // Keep orange for 0.3s more (fade-out duration), then snap to grey
+        setGlowingDots(p => { const s = new Set(p); s.delete(i); return s; });
         colorTimers.current.set(i, window.setTimeout(() => {
           colorTimers.current.delete(i);
-          setOrangeDots(prev => {
-            const next = new Set(prev);
-            next.delete(i);
-            return next;
-          });
+          setOrangeDots(p => { const s = new Set(p); s.delete(i); return s; });
         }, 300));
       }, 600));
     }
   }, []);
 
   const handleKeystrokeGlow = useCallback((isSpace: boolean) => {
-    const activeRightIndices = isMobile && isFocused ? MOBILE_GRID.rightIndices : DESKTOP_GRID.rightIndices;
-    const activeMirrors = isMobile && isFocused ? MOBILE_GRID.mirrors : DESKTOP_GRID.mirrors;
-    const activeCenter = isMobile && isFocused ? MOBILE_GRID.centerRowIndices : DESKTOP_GRID.centerRowIndices;
-
-    if (isSpace) {
-      flashDots(activeCenter);
-    } else {
-      if (activeRightIndices.length === 0) return;
-      const rightIdx = activeRightIndices[Math.floor(Math.random() * activeRightIndices.length)];
-      const leftIdx = activeMirrors.get(rightIdx);
-      if (leftIdx === undefined) return;
-      flashDots([rightIdx, leftIdx]);
-    }
+    const grid = isMobile && isFocused ? MOBILE_GRID : DESKTOP_GRID;
+    if (isSpace) return flashDots(grid.centerRowIndices);
+    if (!grid.rightIndices.length) return;
+    const rightIdx = grid.rightIndices[Math.floor(Math.random() * grid.rightIndices.length)];
+    const leftIdx = grid.mirrors.get(rightIdx);
+    if (leftIdx !== undefined) flashDots([rightIdx, leftIdx]);
   }, [flashDots, isMobile, isFocused]);
 
   useEffect(() => {
