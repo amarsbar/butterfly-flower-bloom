@@ -2,11 +2,11 @@ import { useState, useEffect, useRef, useCallback } from "react";
 import getCaretCoordinates from "textarea-caret";
 
 const ROWS = [78, 130, 182, 234, 286, 338, 390];
-const COLS = Array.from({ length: 48 }, (_, i) => +(34 + i * (456 / 47)).toFixed(3));
 const COL_START = 34;
 const COL_STEP = 456 / 47;
 const ROW_START = 78;
 const ROW_STEP = 52;
+const COLS = Array.from({ length: 48 }, (_, i) => +(COL_START + i * COL_STEP).toFixed(3));
 
 interface LetterSVGProps {
   text: string;
@@ -83,21 +83,16 @@ export default function LetterSVG({ text, onTextChange, onKeystroke, onFocusChan
     document.fonts.load("24px 'ABC Gramercy'").then(() => {
       if (!cancelled) { measure(); updateCaret(); }
     }).catch(() => { });
-
-    const ta = textareaRef.current;
-    if (ta) {
-      ta.addEventListener('select', updateCaret);
-      ta.addEventListener('keyup', updateCaret);
-    }
-
-    return () => {
-      cancelled = true;
-      if (ta) {
-        ta.removeEventListener('select', updateCaret);
-        ta.removeEventListener('keyup', updateCaret);
-      }
-    };
+    return () => { cancelled = true; };
   }, [measure, updateCaret]);
+
+  useEffect(() => {
+    const ta = textareaRef.current;
+    if (!ta) return;
+    ta.addEventListener('select', updateCaret);
+    ta.addEventListener('keyup', updateCaret);
+    return () => { ta.removeEventListener('select', updateCaret); ta.removeEventListener('keyup', updateCaret); };
+  }, [updateCaret]);
 
   useEffect(() => {
     cancelAnimationFrame(rafRef.current);

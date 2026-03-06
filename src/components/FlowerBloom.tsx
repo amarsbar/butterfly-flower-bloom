@@ -10,7 +10,6 @@ const PAGE_VARIANT: Record<Page, string> = { menu: "seed", note: "bloom", messag
 
 const DESIGN_W = 1728;
 const DESIGN_H = 1117;
-const FLOWER_SPAN = 870;
 
 const PETALS = [
   { x: -200.52, y: -200.34 },
@@ -40,6 +39,7 @@ const NAV_DOTS = [
 
 type Petal = (typeof PETALS)[number];
 type Accent = (typeof ACCENTS)[number];
+type AccentCustom = Accent & { isMobile?: boolean; isFocused?: boolean };
 
 const centerEase = [0.32, 0.03, 0.25, 1] as const;
 const centerTransition = { duration: 0.3, ease: centerEase };
@@ -68,10 +68,11 @@ const petalSeedTransition = {
   opacity: { duration: 0 },
 };
 
+const petalHidden = { x: 0, y: 0, opacity: 0, transition: petalSeedTransition };
 const petalVariants = {
-  seed: { x: 0, y: 0, opacity: 0, transition: petalSeedTransition },
+  seed: petalHidden,
   bloom: (p: Petal) => ({ x: p.x, y: p.y, opacity: 1, transition: petalTransition }),
-  message: { x: 0, y: 0, opacity: 0, transition: petalSeedTransition },
+  message: petalHidden,
 };
 
 const accentSpring = { type: "spring" as const, stiffness: 131.6, damping: 21.2, mass: 2 };
@@ -79,17 +80,17 @@ const msgSpring = { type: "spring" as const, stiffness: 158.5, damping: 38.3, ma
 const accentSeedSpring = { type: "spring" as const, stiffness: 400, damping: 35, mass: 1 };
 
 const accentVariants = {
-  seed: (a: Accent & { isMobile?: boolean, isFocused?: boolean }) => ({
+  seed: (a: AccentCustom) => ({
     width: 12, height: 12, x: a.initialX, y: a.initialY,
     rotate: a.initialRotate, borderRadius: 12, backgroundColor: "#48617f", opacity: 1, scale: 1,
     transition: accentSeedSpring,
   }),
-  bloom: (a: Accent & { isMobile?: boolean, isFocused?: boolean }) => ({
+  bloom: (a: AccentCustom) => ({
     width: 39.04, height: 39.04, x: a.finalX, y: a.finalY,
     rotate: 45, borderRadius: 9.76, backgroundColor: "#ff7031", opacity: 1, scale: 1,
     transition: accentSpring,
   }),
-  message: (a: Accent & { isMobile?: boolean, isFocused?: boolean }) => ({
+  message: (a: AccentCustom) => ({
     width: 39.04, height: 39.04, x: a.msgX, y: a.msgY,
     rotate: 135, borderRadius: 9.76, backgroundColor: "#9C84F4",
     opacity: a.isMobile && a.isFocused ? 0 : 1,
@@ -124,15 +125,17 @@ const LABELS: { text: string; page?: Page; style: React.CSSProperties }[] = [
   { text: "About", style: labelPos('translate(-50%, 91.5px)') },
 ];
 
+const labelHidden = { opacity: 0, transition: { duration: 0.15 } };
 const labelVariants = {
   seed: { opacity: 1, transition: { duration: 0.3, delay: 0.3 } },
-  bloom: { opacity: 0, transition: { duration: 0.15 } },
-  message: { opacity: 0, transition: { duration: 0.15 } },
+  bloom: labelHidden,
+  message: labelHidden,
 };
 
+const letterHidden = { opacity: 0, transition: { duration: 0.15 } };
 const letterVariants = {
-  seed: { opacity: 0, transition: { duration: 0.15 } },
-  bloom: { opacity: 0, transition: { duration: 0.15 } },
+  seed: letterHidden,
+  bloom: letterHidden,
   message: { opacity: 1, transition: { duration: 0.2, delay: 0.15 } },
 };
 
@@ -141,9 +144,10 @@ const MSG_TITLE_STYLE: React.CSSProperties = {
   color: '#48617f', letterSpacing: '-2.7px', lineHeight: 1, whiteSpace: 'nowrap', userSelect: 'none',
 };
 
+const msgTitleHidden = { opacity: 0, y: 0, transition: { duration: 0, delay: 0 } };
 const msgTitleVariants = {
-  seed: { opacity: 0, y: 0, transition: { duration: 0, delay: 0 } },
-  bloom: { opacity: 0, y: 0, transition: { duration: 0, delay: 0 } },
+  seed: msgTitleHidden,
+  bloom: msgTitleHidden,
   message: (custom: { isMobile: boolean; isFocused: boolean } | undefined) => ({
     opacity: 1,
     y: custom?.isMobile && custom?.isFocused ? -230 : 0,
@@ -161,9 +165,10 @@ const COUNTER_POSITIONS = [
 
 type CounterPos = (typeof COUNTER_POSITIONS)[number];
 
+const counterHidden = { x: 0, y: 0, opacity: 0, transition: accentSeedSpring };
 const counterVariants = {
-  seed: { x: 0, y: 0, opacity: 0, transition: accentSeedSpring },
-  bloom: { x: 0, y: 0, opacity: 0, transition: accentSeedSpring },
+  seed: counterHidden,
+  bloom: counterHidden,
   message: (p: CounterPos & { isMobile?: boolean }) => ({
     x: p.x, y: p.y, opacity: p.isMobile ? 0 : 1, transition: msgSpring
   }),
@@ -191,12 +196,7 @@ function createDotGrid(cols: [number, number[]][], centerY: number) {
     rows.flatMap(y => [{ x: colX, y, col }, { x: -colX, y, col }])
   );
   const mirrors = new Map<number, number>();
-  dots.forEach((dot, i) => {
-    if (dot.x > 0) {
-      const mirrorIdx = dots.findIndex(d => d !== dot && d.x === -dot.x && Math.abs(d.y - dot.y) < 0.01);
-      if (mirrorIdx >= 0) mirrors.set(i, mirrorIdx);
-    }
-  });
+  for (let i = 0; i < dots.length; i += 2) mirrors.set(i, i + 1);
 
   return {
     dots,
@@ -218,22 +218,12 @@ const SEND_BUTTON: React.CSSProperties = {
   cursor: 'pointer', userSelect: 'none',
 };
 
-const sendVariants = {
-  hidden: (c: { isMobile?: boolean, isFocused?: boolean }) => ({
-    y: c?.isMobile && c?.isFocused ? -230 : 0,
-    scale: 1,
-    opacity: 0,
-    transition: { duration: 0 }
-  }),
-  visibleDesktop: { y: 315, scale: 1, opacity: 1, transition: msgSpring },
-  visibleMobileUnfocused: { y: 330, scale: 1.45, opacity: 1, transition: msgSpring },
-  visibleMobileFocused: { y: 99.4, scale: 1.45, opacity: 1, transition: msgSpring },
-};
+const mobileFocusTransition = { y: centerTransition, opacity: msgSpring, scale: msgSpring };
 
 const COUNTER_BOX: React.CSSProperties = {
   width: 13, padding: 2, borderRadius: 4, display: 'flex', alignItems: 'center', justifyContent: 'center',
   fontFamily: "'Akkurat Mono', monospace", fontSize: 13, color: 'black', letterSpacing: '-0.39px',
-  lineHeight: 1, userSelect: 'none',
+  lineHeight: 1, userSelect: 'none', backgroundColor: '#bed8de',
 };
 
 // --- Components ---
@@ -243,7 +233,7 @@ function CharCounter({ count }: { count: number }) {
   return (
     <div style={{ display: 'flex', gap: 4 }}>
       {chars.map((ch, i) => (
-        <div key={i} style={{ ...COUNTER_BOX, backgroundColor: '#bed8de' }}>
+        <div key={i} style={COUNTER_BOX}>
           {ch}
         </div>
       ))}
@@ -292,6 +282,7 @@ export default function FlowerBloom() {
   const [orangeDots, setOrangeDots] = useState<Set<number>>(new Set());
   const [cascaded, setCascaded] = useState(false);
   const containerRef = useRef<HTMLDivElement>(null);
+  const prevSendVisible = useRef(false);
   const dotTimers = useRef<Map<number, number>>(new Map());
   const colorTimers = useRef<Map<number, number>>(new Map());
 
@@ -355,6 +346,14 @@ export default function FlowerBloom() {
     const timer = setTimeout(() => setCascaded(true), isMobileActive ? 1200 : 2000);
     return () => clearTimeout(timer);
   }, [isDotsActive, isMobileActive]);
+
+  const sendVisible = page === 'message' && messageText.length > 0;
+  const isPopOut = sendVisible && !prevSendVisible.current;
+  useEffect(() => { prevSendVisible.current = sendVisible; });
+  const sendTarget = sendVisible
+    ? { y: isMobile ? (isFocused ? 99.4 : 330) : 315, scale: isMobile ? 1.45 : 1, opacity: 1 }
+    : { y: isMobile && isFocused ? -230 : 0, scale: 1, opacity: 0 };
+  const sendTransition = !sendVisible ? { duration: 0 } : isPopOut || !isMobile ? msgSpring : mobileFocusTransition;
 
   return (
     <div
@@ -453,10 +452,9 @@ export default function FlowerBloom() {
 
         {/* Send button */}
         <motion.div
-          custom={{ isMobile, isFocused }}
-          initial="hidden"
-          animate={page === 'message' && messageText.length > 0 ? (isMobile ? (isFocused ? "visibleMobileFocused" : "visibleMobileUnfocused") : "visibleDesktop") : "hidden"}
-          variants={sendVariants}
+          initial={{ opacity: 0, scale: 1, y: 0 }}
+          animate={sendTarget}
+          transition={sendTransition}
           className="absolute"
           style={SEND_BUTTON}
           onPointerDown={(e) => { e.preventDefault(); }}
