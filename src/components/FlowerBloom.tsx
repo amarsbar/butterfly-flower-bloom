@@ -220,9 +220,9 @@ const DESKTOP_GRID = createDotGrid(MSG_DOT_COLS, -24.28);
 const MOBILE_GRID = createDotGrid(MOBILE_DOT_COLS, 99.4);
 
 const SEND_BUTTON: React.CSSProperties = {
-  width: 185,
+  width: 167,
   height: 58,
-  borderRadius: 29,
+  borderRadius: 1000,
   backgroundColor: '#ff7031',
   display: 'flex',
   alignItems: 'center',
@@ -230,6 +230,7 @@ const SEND_BUTTON: React.CSSProperties = {
   fontFamily: "'ABC Gramercy', serif",
   fontSize: 24,
   color: '#d2ecf2',
+  letterSpacing: '-0.72px',
   cursor: 'pointer',
   userSelect: 'none',
 };
@@ -237,12 +238,13 @@ const SEND_BUTTON: React.CSSProperties = {
 const sendVariants = {
   hidden: (c: { isMobile?: boolean, isFocused?: boolean }) => ({
     y: c?.isMobile && c?.isFocused ? -230 : 0,
+    scale: 1,
     opacity: 0,
     transition: { duration: 0 }
   }),
-  visibleDesktop: { y: 315, opacity: 1, transition: msgSpring },
-  visibleMobileUnfocused: { y: 330, opacity: 1, transition: msgSpring },
-  visibleMobileFocused: { y: 99.4, opacity: 1, transition: msgSpring },
+  visibleDesktop: { y: 315, scale: 1, opacity: 1, transition: msgSpring },
+  visibleMobileUnfocused: { y: 330, scale: 1.45, opacity: 1, transition: msgSpring },
+  visibleMobileFocused: { y: 99.4, scale: 1.45, opacity: 1, transition: msgSpring },
 };
 
 const COUNTER_BOX: React.CSSProperties = {
