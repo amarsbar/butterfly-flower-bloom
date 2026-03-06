@@ -7,6 +7,7 @@ const COL_STEP = 456 / 47;
 const ROW_START = 78;
 const ROW_STEP = 52;
 const COLS = Array.from({ length: 48 }, (_, i) => +(COL_START + i * COL_STEP).toFixed(3));
+const CARET_OFFSET = typeof navigator !== 'undefined' && /iPhone|iPad|iPod|Android/i.test(navigator.userAgent) ? 3 : 8;
 
 interface LetterSVGProps {
   text: string;
@@ -59,9 +60,6 @@ export default function LetterSVG({ text, onTextChange, onKeystroke, onFocusChan
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const [activeDots, setActiveDots] = useState<Set<number>>(new Set());
   const [caretPos, setCaretPos] = useState<{ top: number; left: number } | null>(null);
-  const [caretOffset] = useState(() =>
-    typeof navigator !== 'undefined' && /iPhone|iPad|iPod|Android/i.test(navigator.userAgent) ? 3 : 8
-  );
   const rafRef = useRef<number>(0);
 
   const updateCaret = useCallback(() => {
@@ -160,7 +158,7 @@ export default function LetterSVG({ text, onTextChange, onKeystroke, onFocusChan
           style={{
             position: 'absolute',
             left: 32 + caretPos.left + 2,
-            top: 34 + caretPos.top + caretOffset,
+            top: 34 + caretPos.top + CARET_OFFSET,
             width: 6,
             height: 22,
             borderRadius: 3,
