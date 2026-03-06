@@ -5,8 +5,9 @@ import { motion } from "motion/react";
 import LetterSVG from "./LetterSVG";
 
 type Page = "menu" | "note" | "message";
+type Variant = "seed" | "bloom" | "message";
 
-const PAGE_VARIANT: Record<Page, string> = { menu: "seed", note: "bloom", message: "message" };
+const PAGE_VARIANT: Record<Page, Variant> = { menu: "seed", note: "bloom", message: "message" };
 
 const DESIGN_W = 1728;
 const DESIGN_H = 1117;
@@ -39,7 +40,10 @@ const NAV_DOTS = [
 
 type Petal = (typeof PETALS)[number];
 type Accent = (typeof ACCENTS)[number];
-type AccentCustom = Accent & { isMobile?: boolean; isFocused?: boolean };
+type MobileCtx = { isMobile: boolean; isFocused: boolean };
+type AccentCustom = Accent & MobileCtx;
+
+const MOBILE_FOCUS_Y = -230;
 
 const centerEase = [0.32, 0.03, 0.25, 1] as const;
 const centerTransition = { duration: 0.3, ease: centerEase };
@@ -48,9 +52,9 @@ const centerSeedTransition = { duration: 0.12, ease: centerEase };
 const centerVariants = {
   seed: { width: 66, height: 66, borderRadius: 32, backgroundColor: "#d2ecf2", transition: centerSeedTransition },
   bloom: { width: 463.595, height: 463.595, borderRadius: 26.026, backgroundColor: "#feefff", transition: centerTransition },
-  message: (custom: { isMobile: boolean; isFocused: boolean } | undefined) => ({
+  message: (custom: MobileCtx | undefined) => ({
     width: 524, height: 529, borderRadius: 32, backgroundColor: "#d2ecf2",
-    y: custom?.isMobile && custom?.isFocused ? -230 : 0,
+    y: custom?.isMobile && custom?.isFocused ? MOBILE_FOCUS_Y : 0,
     transition: centerTransition
   }),
 };
@@ -125,17 +129,16 @@ const LABELS: { text: string; page?: Page; style: React.CSSProperties }[] = [
   { text: "About", style: labelPos('translate(-50%, 91.5px)') },
 ];
 
-const labelHidden = { opacity: 0, transition: { duration: 0.15 } };
+const fadeOut = { opacity: 0, transition: { duration: 0.15 } };
 const labelVariants = {
   seed: { opacity: 1, transition: { duration: 0.3, delay: 0.3 } },
-  bloom: labelHidden,
-  message: labelHidden,
+  bloom: fadeOut,
+  message: fadeOut,
 };
 
-const letterHidden = { opacity: 0, transition: { duration: 0.15 } };
 const letterVariants = {
-  seed: letterHidden,
-  bloom: letterHidden,
+  seed: fadeOut,
+  bloom: fadeOut,
   message: { opacity: 1, transition: { duration: 0.2, delay: 0.15 } },
 };
 
@@ -148,9 +151,9 @@ const msgTitleHidden = { opacity: 0, y: 0, transition: { duration: 0, delay: 0 }
 const msgTitleVariants = {
   seed: msgTitleHidden,
   bloom: msgTitleHidden,
-  message: (custom: { isMobile: boolean; isFocused: boolean } | undefined) => ({
+  message: (custom: MobileCtx | undefined) => ({
     opacity: 1,
-    y: custom?.isMobile && custom?.isFocused ? -230 : 0,
+    y: custom?.isMobile && custom?.isFocused ? MOBILE_FOCUS_Y : 0,
     transition: {
       y: centerTransition,
       opacity: { duration: 0, delay: 0.35 }
@@ -169,7 +172,7 @@ const counterHidden = { x: 0, y: 0, opacity: 0, transition: accentSeedSpring };
 const counterVariants = {
   seed: counterHidden,
   bloom: counterHidden,
-  message: (p: CounterPos & { isMobile?: boolean }) => ({
+  message: (p: CounterPos & Pick<MobileCtx, 'isMobile'>) => ({
     x: p.x, y: p.y, opacity: p.isMobile ? 0 : 1, transition: msgSpring
   }),
 };
@@ -352,8 +355,8 @@ export default function FlowerBloom() {
   useEffect(() => { prevSendVisible.current = sendVisible; });
   const sendTarget = sendVisible
     ? { y: isMobile ? (isFocused ? 99.4 : 330) : 315, scale: isMobile ? 1.45 : 1, opacity: 1 }
-    : { y: isMobile && isFocused ? -230 : 0, scale: 1, opacity: 0 };
-  const sendTransition = !sendVisible ? { duration: 0 } : isPopOut || !isMobile ? msgSpring : mobileFocusTransition;
+    : { y: isMobile && isFocused ? MOBILE_FOCUS_Y : 0, scale: 1, opacity: 0 };
+  const sendTransition = !sendVisible ? { duration: 0 } : (isPopOut || !isMobile) ? msgSpring : mobileFocusTransition;
 
   return (
     <div
